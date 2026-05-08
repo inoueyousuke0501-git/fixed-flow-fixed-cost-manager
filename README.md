@@ -57,6 +57,12 @@ Publish directory: dist
 
 `netlify.toml` に同じ設定を入れているため、Netlify側では通常そのまま検出されます。
 
+## 公開URL
+
+GitHub Pagesでも公開済みです。
+
+https://inoueyousuke0501-git.github.io/fixed-flow-fixed-cost-manager/
+
 ## 注意
 
 - データはブラウザの `localStorage` に保存されます。端末やブラウザを変える場合はJSONエクスポート/インポートを使ってください。
