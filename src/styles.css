@@ -35,11 +35,13 @@
 }
 
 html {
+  height: 100%;
   min-height: 100%;
   background: var(--bg);
 }
 
 body {
+  height: 100%;
   min-width: 320px;
   min-height: 100%;
   margin: 0;
@@ -51,6 +53,10 @@ body {
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     "Hiragino Sans", "Yu Gothic", sans-serif;
   letter-spacing: 0;
+}
+
+#root {
+  height: 100%;
 }
 
 button,
@@ -76,7 +82,9 @@ textarea:focus-visible {
 .app-shell {
   display: grid;
   grid-template-columns: 278px minmax(0, 1fr);
+  height: 100dvh;
   min-height: 100vh;
+  overflow: hidden;
 }
 
 .sidebar {
@@ -160,9 +168,13 @@ textarea:focus-visible {
 }
 
 main {
+  display: flex;
+  flex-direction: column;
   width: min(1240px, 100%);
+  height: 100dvh;
   margin: 0 auto;
   padding: 28px;
+  overflow: hidden;
 }
 
 .topbar {
@@ -270,6 +282,185 @@ main {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.home-screen {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 14px;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.hero-card {
+  display: flex;
+  flex-direction: column;
+  grid-row: 1 / 3;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(5, 150, 105, 0.12)),
+    var(--surface);
+}
+
+.hero-card-top,
+.hero-metrics,
+.home-actions,
+.compact-cost-main,
+.compact-cost-meta,
+.compact-cost-actions {
+  display: flex;
+  align-items: center;
+}
+
+.hero-card-top {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hero-card-top h2 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.hero-card-top > span {
+  min-height: 30px;
+  border-radius: 999px;
+  padding: 5px 11px;
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.hero-amount {
+  display: block;
+  margin: 22px 0 14px;
+  font-size: clamp(44px, 6vw, 76px);
+  line-height: 0.95;
+}
+
+.hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.hero-metrics div {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  padding: 12px;
+}
+
+.hero-metrics span,
+.hero-card small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.hero-metrics strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 22px;
+}
+
+.home-side {
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  min-height: 0;
+}
+
+.glass-tile {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+
+.glass-tile strong,
+.glass-tile span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.glass-tile strong {
+  font-size: 20px;
+}
+
+.glass-tile span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.glass-tile b {
+  font-size: 20px;
+}
+
+.home-breakdown {
+  min-height: 0;
+}
+
+.compact-heading {
+  margin-bottom: 12px;
+}
+
+.category-mini-list {
+  display: grid;
+  gap: 9px;
+}
+
+.category-mini-row {
+  display: grid;
+  grid-template-columns: auto 72px minmax(70px, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.category-mini-row strong,
+.category-mini-row b {
+  font-size: 13px;
+}
+
+.home-actions {
+  grid-column: 2;
+  gap: 10px;
+}
+
+.action-tile {
+  display: grid;
+  flex: 1;
+  min-height: 66px;
+  place-items: center;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 900;
+}
+
+.primary-action {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
 }
 
 .stats-grid {
@@ -619,6 +810,114 @@ main {
   gap: 12px;
 }
 
+.list-screen {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.list-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.paged-cost-list {
+  min-height: 0;
+  align-content: start;
+  overflow: hidden;
+}
+
+.compact-cost-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 104px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.compact-cost-main {
+  gap: 10px;
+  min-width: 0;
+}
+
+.compact-cost-main > div {
+  min-width: 0;
+}
+
+.compact-cost-main h3,
+.compact-cost-main p {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-cost-main p,
+.compact-cost-amount span,
+.compact-cost-meta span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.compact-cost-amount {
+  min-width: 108px;
+  text-align: right;
+}
+
+.compact-cost-amount strong {
+  display: block;
+  font-size: 20px;
+}
+
+.compact-cost-meta {
+  display: grid;
+  min-width: 150px;
+  gap: 4px;
+}
+
+.compact-cost-actions {
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.danger-icon-button {
+  color: var(--danger);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.pager span {
+  flex: 0 0 48px;
+  color: var(--muted);
+  font-weight: 900;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.pager .ghost-button {
+  width: auto;
+  flex: 1;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .cost-card {
   display: grid;
   gap: 14px;
@@ -707,6 +1006,20 @@ main {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+  min-height: 0;
+  align-content: start;
+  overflow: hidden;
+}
+
+.editor-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.manual-entry-button {
+  width: 100%;
 }
 
 .field {
@@ -906,6 +1219,11 @@ main {
   gap: 12px;
 }
 
+.plan-drawer-head > div {
+  display: grid;
+  gap: 3px;
+}
+
 .preset-picker-head h3 {
   margin: 0;
   font-size: 18px;
@@ -1032,6 +1350,27 @@ main {
   font-weight: 800;
 }
 
+.mini-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.mini-pager .ghost-button {
+  width: 42px;
+  min-height: 34px;
+  padding: 0;
+}
+
+.mini-pager span {
+  min-width: 46px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+}
+
 .preset-card {
   display: grid;
   gap: 5px;
@@ -1055,6 +1394,19 @@ main {
 @media (max-width: 1120px) {
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-screen {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+
+  .hero-card {
+    grid-row: auto;
+  }
+
+  .home-actions {
+    grid-column: auto;
   }
 
   .hero-panel {
@@ -1091,6 +1443,7 @@ main {
 
   .topbar {
     align-items: flex-start;
+    margin-bottom: 10px;
   }
 
   .topbar h1 {
@@ -1106,8 +1459,93 @@ main {
     grid-template-columns: 1fr;
   }
 
+  .home-screen {
+    gap: 9px;
+  }
+
   .panel {
     padding: 16px;
+  }
+
+  .hero-card {
+    padding: 16px;
+  }
+
+  .hero-card-top h2 {
+    font-size: 20px;
+  }
+
+  .hero-amount {
+    margin: 12px 0 10px;
+    font-size: 42px;
+  }
+
+  .hero-metrics {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .hero-metrics div {
+    padding: 9px;
+  }
+
+  .hero-metrics strong {
+    font-size: 16px;
+  }
+
+  .home-side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto;
+    gap: 9px;
+  }
+
+  .glass-tile {
+    align-items: start;
+    grid-template-columns: 1fr;
+    min-height: 92px;
+    padding: 12px;
+  }
+
+  .glass-tile strong,
+  .glass-tile b {
+    font-size: 15px;
+  }
+
+  .glass-tile span {
+    font-size: 11px;
+  }
+
+  .home-breakdown {
+    display: none;
+  }
+
+  .compact-heading {
+    align-items: center;
+    flex-direction: row;
+    margin-bottom: 8px;
+  }
+
+  .category-mini-list {
+    gap: 7px;
+  }
+
+  .category-mini-row {
+    grid-template-columns: auto 54px minmax(44px, 1fr) auto;
+    gap: 7px;
+  }
+
+  .category-mini-row strong,
+  .category-mini-row b {
+    font-size: 11px;
+  }
+
+  .home-actions {
+    gap: 8px;
+  }
+
+  .action-tile {
+    min-height: 52px;
+    font-size: 12px;
   }
 
   .hero-copy h1 {
@@ -1121,6 +1559,88 @@ main {
   .review-grid,
   .preset-grid {
     grid-template-columns: 1fr;
+  }
+
+  .editor-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .editor-form .span-2 {
+    grid-column: 1 / -1;
+  }
+
+  .editor-form .field {
+    gap: 5px;
+  }
+
+  .editor-form .field input,
+  .editor-form .field select,
+  .editor-form .field textarea {
+    min-height: 40px;
+    padding: 8px 10px;
+  }
+
+  .editor-form .form-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .editor-form .form-actions {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .editor-form .form-actions .ghost-button,
+  .editor-form .form-actions .primary-button {
+    flex: 1;
+    width: auto;
+  }
+
+  .list-panel .toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+
+  .list-panel .search-box {
+    grid-column: 1 / -1;
+  }
+
+  .list-panel .toolbar label {
+    min-height: 38px;
+  }
+
+  .list-heading .primary-button {
+    display: none;
+  }
+
+  .compact-cost-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    min-height: 92px;
+    padding: 10px;
+  }
+
+  .compact-cost-amount {
+    min-width: 92px;
+  }
+
+  .compact-cost-amount strong {
+    font-size: 17px;
+  }
+
+  .compact-cost-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .compact-cost-actions {
+    grid-column: 1 / -1;
+  }
+
+  .pager {
+    margin-top: 8px;
   }
 
   .provider-tile-grid {
@@ -1227,5 +1747,19 @@ main {
   .danger-ghost-button,
   .upload-button {
     width: 100%;
+  }
+
+  .mini-pager .ghost-button {
+    width: 42px;
+    flex: 0 0 42px;
+  }
+
+  .pager .ghost-button {
+    width: auto;
+  }
+
+  .editor-form .form-actions .ghost-button,
+  .editor-form .form-actions .primary-button {
+    width: auto;
   }
 }

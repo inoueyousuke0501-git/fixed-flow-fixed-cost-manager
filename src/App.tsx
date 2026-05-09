@@ -826,6 +826,9 @@ export default function App() {
   const [categoryFilter, setCategoryFilter] = useState<Category | "all">("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey>("date");
+  const [listPage, setListPage] = useState(0);
+  const [presetPage, setPresetPage] = useState(0);
+  const [editorStep, setEditorStep] = useState<"preset" | "form" | "details">("preset");
   const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()));
   const [selectedPresetProvider, setSelectedPresetProvider] = useState<string | null>(null);
 
@@ -838,6 +841,10 @@ export default function App() {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
+  useEffect(() => {
+    setListPage(0);
+  }, [categoryFilter, costs.length, paymentFilter, query, sortKey]);
+
   const today = useMemo(() => startOfDay(new Date()), []);
 
   const paymentMethods = useMemo(() => {
@@ -845,6 +852,9 @@ export default function App() {
   }, [costs]);
 
   const presetGroups = useMemo(() => Object.entries(groupPresets()), []);
+  const presetPageSize = 4;
+  const presetPageCount = Math.max(1, Math.ceil(presetGroups.length / presetPageSize));
+  const visiblePresetGroups = presetGroups.slice(presetPage * presetPageSize, (presetPage + 1) * presetPageSize);
 
   const currentMonthOccurrences = useMemo(() => {
     return costs.flatMap((cost) =>
@@ -929,6 +939,10 @@ export default function App() {
       });
   }, [categoryFilter, costs, paymentFilter, query, sortKey, today]);
 
+  const listPageSize = 2;
+  const listPageCount = Math.max(1, Math.ceil(filteredCosts.length / listPageSize));
+  const visibleCosts = filteredCosts.slice(listPage * listPageSize, (listPage + 1) * listPageSize);
+
   const calendarOccurrences = useMemo(() => {
     return costs.flatMap((cost) =>
       occurrencesInMonth(cost, calendarMonth).map((date) => ({
@@ -944,6 +958,7 @@ export default function App() {
     if (view === "editor" && activeView !== "editor") {
       setEditingId(null);
       setDraft(emptyDraft());
+      setEditorStep("preset");
     }
     setActiveView(view);
   }
@@ -952,6 +967,8 @@ export default function App() {
     setEditingId(null);
     setDraft(emptyDraft());
     setSelectedPresetProvider(null);
+    setPresetPage(0);
+    setEditorStep("preset");
     setActiveView("editor");
   }
 
@@ -969,6 +986,7 @@ export default function App() {
       memo: cost.memo,
       priority: cost.priority,
     });
+    setEditorStep("form");
     setActiveView("editor");
   }
 
@@ -980,6 +998,7 @@ export default function App() {
     const preset = costPresets.find((item) => item.id === presetId);
     if (!preset) return;
     setSelectedPresetProvider(preset.provider);
+    setEditorStep("form");
 
     setDraft((current) => ({
       ...current,
@@ -1027,6 +1046,7 @@ export default function App() {
 
     setDraft(emptyDraft());
     setEditingId(null);
+    setEditorStep("preset");
     setActiveView("list");
   }
 
@@ -1111,163 +1131,112 @@ export default function App() {
     setActiveView("dashboard");
   }
 
-  const renderDashboard = () => (
-    <div className="view-grid">
-      <section className="stats-grid">
-        <StatCard
-          icon={<WalletCards size={22} />}
-          label="今月の固定費合計"
-          value={formatCurrency.format(thisMonthTotal)}
-          sub={`${currentMonthOccurrences.length}件の支払予定`}
-          tone="strong"
-        />
-        <StatCard
-          icon={<CircleDollarSign size={22} />}
-          label="月額換算"
-          value={formatCurrency.format(monthlyTotal)}
-          sub="周期をならした毎月の重さ"
-        />
-        <StatCard
-          icon={<CalendarDays size={22} />}
-          label="年間換算額"
-          value={formatCurrency.format(annualTotal)}
-          sub="単発予定は今年分だけ加算"
-        />
-        <StatCard
-          icon={<AlertTriangle size={22} />}
-          label="見直し候補"
-          value={`${reviewCandidates.length}件`}
-          sub="高優先度・高額・解約予定から抽出"
-          tone="warn"
-        />
-      </section>
+  const renderDashboard = () => {
+    const next = upcoming[0];
+    const review = reviewCandidates[0];
+    const topCategories = categoryTotals.slice(0, 3);
+    const monthlyWeight = Math.min(100, (monthlyTotal / 180000) * 100);
 
-      <section className="panel hero-panel wide-panel">
-        <div className="hero-copy">
-          <p className="eyebrow">Fixed Flow</p>
-          <h1>固定費の重さを、毎日見えるところに。</h1>
-          <p>
-            次回支払日、月額換算、年額インパクトを一画面にまとめます。
-            localStorage保存なので、まずは個人用の家計メンテナンスに集中できます。
-          </p>
-        </div>
-        <div className="weight-meter" aria-label="月額換算の重さ">
-          <div>
-            <span>月額換算</span>
-            <strong>{formatCurrency.format(monthlyTotal)}</strong>
+    return (
+      <div className="home-screen">
+        <section className="hero-card panel">
+          <div className="hero-card-top">
+            <div>
+              <p className="eyebrow">Monthly fixed cost</p>
+              <h2>今月の固定費</h2>
+            </div>
+            <span>{currentMonthOccurrences.length}件</span>
+          </div>
+          <strong className="hero-amount">{formatCurrency.format(thisMonthTotal)}</strong>
+          <div className="hero-metrics">
+            <div>
+              <span>月額換算</span>
+              <strong>{formatCurrency.format(monthlyTotal)}</strong>
+            </div>
+            <div>
+              <span>年間換算</span>
+              <strong>{formatCurrency.format(annualTotal)}</strong>
+            </div>
           </div>
           <div className="meter-track">
-            <span style={{ width: `${Math.min(100, (monthlyTotal / 180000) * 100)}%` }} />
+            <span style={{ width: `${monthlyWeight}%` }} />
           </div>
           <small>
             {monthlyTotal >= 150000
-              ? "住居費・ローンを含めてかなり重めです"
+              ? "固定費がかなり重め。まず大きい順に見直す価値があります。"
               : monthlyTotal >= 80000
-                ? "固定費の見直し余地を探せます"
-                : "軽めに保てています"}
+                ? "見直し余地あり。次回支払前に候補を確認しましょう。"
+                : "固定費は軽め。新規契約だけ増やしすぎに注意。"}
           </small>
-        </div>
-      </section>
+        </section>
 
-      <section className="panel">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Next payments</p>
-            <h2>次回支払予定</h2>
-          </div>
-          <button className="ghost-button" onClick={openCreate} type="button">
-            <Plus size={16} />
-            追加
-          </button>
-        </div>
-        {upcoming.length > 0 ? (
-          <div className="upcoming-list">
-            {upcoming.slice(0, 7).map(({ cost, date, days }) => (
-              <article className="upcoming-item" key={`${cost.id}-${date.toISOString()}`}>
-                <div>
-                  <span className={`priority-dot priority-${cost.priority}`} />
-                  <strong>{cost.name}</strong>
-                  <small>{days === 0 ? "今日" : `${days}日後`}・{formatShortDate.format(date)}</small>
-                </div>
-                <span>{formatCurrency.format(cost.amount)}</span>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <EmptyState title="45日以内の支払いはありません" description="カレンダーで先の月も確認できます。" />
-        )}
-      </section>
+        <section className="home-side">
+          <article className="glass-tile next-tile">
+            <div>
+              <p className="eyebrow">Next</p>
+              <strong>{next ? next.cost.name : "支払予定なし"}</strong>
+              <span>{next ? `${next.days === 0 ? "今日" : `${next.days}日後`}・${formatShortDate.format(next.date)}` : "45日以内は空です"}</span>
+            </div>
+            <b>{next ? formatCurrency.format(next.cost.amount) : "-"}</b>
+          </article>
 
-      <section className="panel">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Categories</p>
-            <h2>カテゴリ別の支出</h2>
+          <article className="glass-tile review-tile">
+            <div>
+              <p className="eyebrow">Review</p>
+              <strong>{review ? review.cost.name : "見直し候補なし"}</strong>
+              <span>{review ? `月換算 ${formatCurrency.format(review.monthly)}` : "優先度を高にすると表示されます"}</span>
+            </div>
+            <button className="icon-button" type="button" onClick={() => (review ? openEdit(review.cost) : setActiveView("list"))} aria-label="見直し候補を開く">
+              <Edit3 size={16} />
+            </button>
+          </article>
+        </section>
+
+        <section className="home-breakdown panel">
+          <div className="section-heading compact-heading">
+            <div>
+              <p className="eyebrow">Breakdown</p>
+              <h2>支出の重い順</h2>
+            </div>
+            <button className="ghost-button" type="button" onClick={() => setActiveView("list")}>
+              詳細
+            </button>
           </div>
-          <span className="muted">月額換算</span>
-        </div>
-        {categoryTotals.length > 0 ? (
-          <div className="category-list">
-            {categoryTotals.map((category) => (
-              <div className="category-row" key={category.value}>
-                <div>
-                  <span className="category-swatch" style={{ background: category.color }} />
-                  <strong>{category.label}</strong>
-                </div>
+          <div className="category-mini-list">
+            {topCategories.map((category) => (
+              <div className="category-mini-row" key={category.value}>
+                <span className="category-swatch" style={{ background: category.color }} />
+                <strong>{category.label}</strong>
                 <div className="category-bar-wrap">
-                  <span
-                    className="category-bar"
-                    style={{ width: `${(category.total / maxCategoryTotal) * 100}%`, background: category.color }}
-                  />
+                  <span className="category-bar" style={{ width: `${(category.total / maxCategoryTotal) * 100}%`, background: category.color }} />
                 </div>
-                <span>{formatCurrency.format(category.total)}</span>
+                <b>{formatCurrency.format(category.total)}</b>
               </div>
             ))}
           </div>
-        ) : (
-          <EmptyState title="カテゴリ集計はまだありません" description="固定費を追加すると自動で表示します。" />
-        )}
-      </section>
+        </section>
 
-      <section className="panel wide-panel">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Review queue</p>
-            <h2>見直し候補</h2>
-          </div>
-          <button className="ghost-button" type="button" onClick={() => setActiveView("list")}>
-            一覧で確認
+        <section className="home-actions">
+          <button className="action-tile primary-action" type="button" onClick={openCreate}>
+            <Plus size={18} />
+            <span>追加</span>
           </button>
-        </div>
-        {reviewCandidates.length > 0 ? (
-          <div className="review-grid">
-            {reviewCandidates.map(({ cost, monthly, cancelSoon }) => (
-              <article className="review-card" key={cost.id}>
-                <div className="review-card-top">
-                  <span className={`chip chip-${cost.priority}`}>優先度 {priorityLabel(cost.priority)}</span>
-                  <button className="icon-button" onClick={() => openEdit(cost)} aria-label={`${cost.name}を編集`}>
-                    <Edit3 size={16} />
-                  </button>
-                </div>
-                <strong>{cost.name}</strong>
-                <p>{cost.memo || "利用頻度・代替プラン・年払い割引を確認しましょう。"}</p>
-                <div className="review-card-foot">
-                  <span>月換算 {formatCurrency.format(monthly)}</span>
-                  {cancelSoon && <span>解約予定近い</span>}
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <EmptyState title="大きな見直し候補はありません" description="優先度を高にするとここへ集められます。" />
-        )}
-      </section>
-    </div>
-  );
+          <button className="action-tile" type="button" onClick={() => setActiveView("calendar")}>
+            <CalendarDays size={18} />
+            <span>予定</span>
+          </button>
+          <button className="action-tile" type="button" onClick={() => setActiveView("settings")}>
+            <Database size={18} />
+            <span>保存</span>
+          </button>
+        </section>
+      </div>
+    );
+  };
 
   const renderList = () => (
-    <div className="view-grid">
-      <section className="panel wide-panel">
+    <div className="list-screen">
+      <section className="panel wide-panel list-panel">
         <div className="section-heading list-heading">
           <div>
             <p className="eyebrow">Fixed costs</p>
@@ -1321,18 +1290,43 @@ export default function App() {
         </div>
 
         {filteredCosts.length > 0 ? (
-          <div className="cost-list">
-            {filteredCosts.map((cost) => (
-              <CostCard
-                cost={cost}
-                key={cost.id}
-                today={today}
-                onEdit={() => openEdit(cost)}
-                onDelete={() => deleteCost(cost.id)}
-                onAdvance={() => advancePayment(cost.id)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="cost-list paged-cost-list">
+              {visibleCosts.map((cost) => (
+                <CompactCostCard
+                  cost={cost}
+                  key={cost.id}
+                  today={today}
+                  onEdit={() => openEdit(cost)}
+                  onDelete={() => deleteCost(cost.id)}
+                  onAdvance={() => advancePayment(cost.id)}
+                />
+              ))}
+            </div>
+            <div className="pager">
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => setListPage((current) => Math.max(0, current - 1))}
+                disabled={listPage === 0}
+              >
+                <ChevronLeft size={16} />
+                前へ
+              </button>
+              <span>
+                {listPage + 1} / {listPageCount}
+              </span>
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => setListPage((current) => Math.min(listPageCount - 1, current + 1))}
+                disabled={listPage >= listPageCount - 1}
+              >
+                次へ
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </>
         ) : (
           <EmptyState
             title="条件に合う固定費がありません"
@@ -1350,7 +1344,7 @@ export default function App() {
   );
 
   const renderEditor = () => (
-    <section className="panel editor-panel">
+    <section className={`panel editor-panel editor-step-${editorStep}`}>
       <div className="section-heading">
         <div>
           <p className="eyebrow">{editingId ? "Edit" : "Add new"}</p>
@@ -1364,6 +1358,7 @@ export default function App() {
         )}
       </div>
 
+      {editorStep === "preset" && (
       <div className="preset-picker">
         <div className="preset-picker-head">
           <div>
@@ -1375,8 +1370,13 @@ export default function App() {
         {selectedPresetProvider ? (
           <div className="plan-drawer">
             <div className="plan-drawer-head">
-              <strong>{selectedPresetProvider}</strong>
-              <span>{presetGroups.find(([provider]) => provider === selectedPresetProvider)?.[1].length ?? 0}プラン</span>
+              <div>
+                <strong>{selectedPresetProvider}</strong>
+                <span>{presetGroups.find(([provider]) => provider === selectedPresetProvider)?.[1].length ?? 0}プラン</span>
+              </div>
+              <button className="ghost-button" type="button" onClick={() => setSelectedPresetProvider(null)}>
+                変更
+              </button>
             </div>
             <div className="plan-tile-grid">
               {(presetGroups.find(([provider]) => provider === selectedPresetProvider)?.[1] ?? []).map((preset) => {
@@ -1397,34 +1397,53 @@ export default function App() {
             </div>
           </div>
         ) : (
-          <div className="preset-hint">
-            <Sparkles size={16} />
-            サービスのタイルを選ぶと、プラン候補がここに開きます。
-          </div>
-        )}
-        <div className="provider-tile-grid">
-          {presetGroups.map(([provider, presets]) => {
-            const summary = presetSummary(presets);
-            const isActive = selectedPresetProvider === provider;
-            return (
+          <>
+            <div className="provider-tile-grid">
+              {visiblePresetGroups.map(([provider, presets]) => {
+                const summary = presetSummary(presets);
+                return (
+                  <button className="provider-tile" type="button" key={provider} onClick={() => setSelectedPresetProvider(provider)}>
+                    <span className="provider-mark">{providerInitial(provider)}</span>
+                    <strong>{provider}</strong>
+                    <small>
+                      {presets.length}プラン・{formatCurrency.format(summary.minimum)}から
+                    </small>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mini-pager">
               <button
-                className={`provider-tile ${isActive ? "active" : ""}`}
+                className="ghost-button"
                 type="button"
-                key={provider}
-                onClick={() => setSelectedPresetProvider(isActive ? null : provider)}
+                onClick={() => setPresetPage((current) => Math.max(0, current - 1))}
+                disabled={presetPage === 0}
               >
-                <span className="provider-mark">{providerInitial(provider)}</span>
-                <strong>{provider}</strong>
-                <small>
-                  {presets.length}プラン・{formatCurrency.format(summary.minimum)}から
-                </small>
+                <ChevronLeft size={15} />
               </button>
-            );
-          })}
-        </div>
+              <span>{presetPage + 1} / {presetPageCount}</span>
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => setPresetPage((current) => Math.min(presetPageCount - 1, current + 1))}
+                disabled={presetPage >= presetPageCount - 1}
+              >
+                <ChevronRight size={15} />
+              </button>
+            </div>
+          </>
+        )}
+        <button className="primary-button manual-entry-button" type="button" onClick={() => setEditorStep("form")}>
+          <Edit3 size={16} />
+          手入力で追加
+        </button>
       </div>
+      )}
 
+      {editorStep !== "preset" && (
       <form className="editor-form" onSubmit={saveCost}>
+        {editorStep === "form" ? (
+          <>
         <label className="field span-2">
           <span>名称</span>
           <input value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} placeholder="例: Netflix" />
@@ -1482,6 +1501,9 @@ export default function App() {
             ))}
           </datalist>
         </label>
+          </>
+        ) : (
+          <>
         <label className="field">
           <span>契約開始日</span>
           <input type="date" value={draft.startDate} onChange={(event) => updateDraft("startDate", event.target.value)} />
@@ -1519,6 +1541,8 @@ export default function App() {
             placeholder="利用頻度、更新月、解約条件、割引の有無など"
           />
         </label>
+          </>
+        )}
         <div className="form-summary span-2">
           <div>
             <span>月額換算</span>
@@ -1532,15 +1556,25 @@ export default function App() {
           </div>
         </div>
         <div className="form-actions span-2">
-          <button className="ghost-button" type="button" onClick={() => setActiveView(editingId ? "list" : "dashboard")}>
-            キャンセル
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={() => (editorStep === "details" ? setEditorStep("form") : setActiveView(editingId ? "list" : "dashboard"))}
+          >
+            {editorStep === "details" ? "戻る" : "キャンセル"}
           </button>
+          {editorStep === "form" && (
+            <button className="ghost-button" type="button" onClick={() => setEditorStep("details")}>
+              詳細項目
+            </button>
+          )}
           <button className="primary-button" type="submit">
             <Save size={16} />
             保存
           </button>
         </div>
       </form>
+      )}
     </section>
   );
 
@@ -1700,6 +1734,7 @@ export default function App() {
                   setSelectedPresetProvider(provider);
                   setEditingId(null);
                   setDraft(emptyDraft());
+                  setEditorStep("preset");
                   setActiveView("editor");
                 }}
               >
@@ -1756,10 +1791,12 @@ export default function App() {
               <Database size={16} />
               データ
             </button>
-            <button className="primary-button" type="button" onClick={openCreate}>
-              <Plus size={16} />
-              追加
-            </button>
+            {activeView !== "editor" && (
+              <button className="primary-button" type="button" onClick={openCreate}>
+                <Plus size={16} />
+                追加
+              </button>
+            )}
           </div>
         </header>
 
@@ -1857,6 +1894,59 @@ function CostCard({
         <button className="danger-ghost-button" type="button" onClick={onDelete}>
           <Trash2 size={15} />
           削除
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function CompactCostCard({
+  cost,
+  today,
+  onEdit,
+  onDelete,
+  onAdvance,
+}: {
+  cost: FixedCost;
+  today: Date;
+  onEdit: () => void;
+  onDelete: () => void;
+  onAdvance: () => void;
+}) {
+  const next = nextOccurrenceDate(cost, today);
+  const days = next ? diffDays(today, next) : null;
+  const monthly = monthlyEquivalent(cost);
+  const category = categories.find((item) => item.value === cost.category);
+
+  return (
+    <article className="compact-cost-card">
+      <div className="compact-cost-main">
+        <span className="category-swatch" style={{ background: category?.color }} />
+        <div>
+          <h3>{cost.name}</h3>
+          <p>{cost.category}・{cost.paymentMethod}</p>
+        </div>
+      </div>
+      <div className="compact-cost-amount">
+        <strong>{formatCurrency.format(cost.amount)}</strong>
+        <span>{cycleCompact(cost.cycle)}</span>
+      </div>
+      <div className="compact-cost-meta">
+        <span>{next ? `${days === 0 ? "今日" : `${days}日後`}・${formatShortDate.format(next)}` : "予定なし"}</span>
+        <span>月換算 {formatCurrency.format(monthly)}</span>
+        <span className={`priority-text priority-${cost.priority}`}>見直し {priorityLabel(cost.priority)}</span>
+      </div>
+      <div className="compact-cost-actions">
+        {cycleMonths(cost.cycle) && (
+          <button className="icon-button" type="button" onClick={onAdvance} aria-label={`${cost.name}を次回へ進める`}>
+            <CheckCircle2 size={15} />
+          </button>
+        )}
+        <button className="icon-button" type="button" onClick={onEdit} aria-label={`${cost.name}を編集`}>
+          <Edit3 size={15} />
+        </button>
+        <button className="icon-button danger-icon-button" type="button" onClick={onDelete} aria-label={`${cost.name}を削除`}>
+          <Trash2 size={15} />
         </button>
       </div>
     </article>
