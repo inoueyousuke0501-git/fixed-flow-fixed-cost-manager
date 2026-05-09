@@ -786,6 +786,26 @@ main {
   --logo-text: var(--surface);
 }
 
+.logo-music-service {
+  --logo-accent: #fb7185;
+  --logo-text: #fff;
+}
+
+.logo-video-service {
+  --logo-accent: #111827;
+  --logo-text: #fff;
+}
+
+.logo-shopping-service {
+  --logo-accent: #f59e0b;
+  --logo-text: #111827;
+}
+
+.logo-card-service {
+  --logo-accent: #2563eb;
+  --logo-text: #fff;
+}
+
 .category-bar-wrap {
   height: 10px;
   overflow: hidden;
@@ -2747,5 +2767,178 @@ main {
 
   .inventory-tile {
     min-height: 76px;
+  }
+}
+
+/* Editor polish: compact modal-like flow for the 4-tab concept UI. */
+.editor-panel {
+  min-height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  overflow: visible;
+}
+
+.editor-panel .section-heading {
+  margin-bottom: 12px;
+}
+
+.editor-panel .eyebrow {
+  display: none;
+}
+
+.preset-picker,
+.editor-form {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  padding: 16px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.preset-picker-head,
+.plan-drawer-head {
+  margin-bottom: 14px;
+}
+
+.preset-picker-head h3,
+.selected-service-head h3 {
+  color: #111827;
+}
+
+.preset-picker-head span,
+.selected-service-head span,
+.custom-plan-box span {
+  color: #717888;
+}
+
+.service-choice-tile,
+.plan-tile {
+  border-color: #e5e7eb;
+  background: #fff;
+  color: #111827;
+}
+
+.service-choice-tile strong,
+.plan-tile strong {
+  color: #111827;
+}
+
+.service-choice-tile small,
+.plan-tile span,
+.plan-tile small {
+  color: #717888;
+}
+
+.custom-plan-box {
+  border-color: #e5e7eb;
+  background: #f8fafc;
+}
+
+.field > span {
+  color: #4b5563;
+}
+
+.field input,
+.field select,
+.field textarea {
+  border-color: #dfe3ea;
+  background: #fff;
+  color: #111827;
+}
+
+.form-summary div {
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  color: #111827;
+}
+
+.form-summary span {
+  color: #64748b;
+}
+
+.form-summary strong {
+  color: #111827;
+}
+
+.form-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.form-actions .primary-button,
+.form-actions .ghost-button,
+.editor-panel .danger-ghost-button {
+  min-height: 44px;
+  border-radius: 8px;
+}
+
+.form-actions .primary-button {
+  grid-column: 1 / -1;
+}
+
+.concept-add-button {
+  width: 44px;
+  height: 44px;
+  border-color: #dbe4f0;
+  background: #fff;
+  color: #126bff;
+  box-shadow: 0 8px 20px rgba(18, 107, 255, 0.12);
+}
+
+@media (max-width: 880px) {
+  .editor-panel {
+    overflow: visible;
+  }
+
+  .editor-panel .section-heading {
+    align-items: center;
+  }
+
+  .preset-picker,
+  .editor-form {
+    padding: 14px;
+  }
+
+  .service-tile-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .service-choice-tile {
+    min-height: 116px;
+    padding: 10px 6px;
+  }
+
+  .service-choice-tile small {
+    display: none;
+  }
+
+  .editor-form {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .editor-form .span-2,
+  .form-summary {
+    grid-column: auto;
+  }
+
+  .form-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plan-drawer-head,
+  .selected-service-head,
+  .custom-plan-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .plan-tile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

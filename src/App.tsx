@@ -24,6 +24,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  ShoppingBag,
   Sparkles,
   Sun,
   Trash2,
@@ -1324,7 +1325,7 @@ export default function App() {
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="名称・メモ・支払方法で検索"
+              placeholder="名称・メモで検索"
             />
           </label>
           <label>
@@ -1421,7 +1422,7 @@ export default function App() {
             <div className="preset-picker-head">
               <div>
                 <p className="eyebrow">Choose</p>
-                <h3>ロゴ・アイコンから選ぶ</h3>
+                <h3>ピクトグラムから選ぶ</h3>
               </div>
               <span>プランは次の画面で選択</span>
             </div>
@@ -1594,20 +1595,6 @@ export default function App() {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label className="field">
-                  <span>支払方法</span>
-                  <input
-                    value={draft.paymentMethod}
-                    onChange={(event) => updateDraft("paymentMethod", event.target.value)}
-                    placeholder="例: 楽天カード"
-                    list="payment-methods"
-                  />
-                  <datalist id="payment-methods">
-                    {paymentMethods.map((method) => (
-                      <option value={method} key={method} />
-                    ))}
-                  </datalist>
                 </label>
               </>
             ) : (
@@ -1835,6 +1822,11 @@ export default function App() {
             <h1>{pageTitle(activeView)}</h1>
           </div>
           {activeView === "dashboard" && <button className="month-chip" type="button">2026年5月⌄</button>}
+          {activeView === "list" && (
+            <button className="icon-button concept-add-button" type="button" onClick={openCreate} aria-label="固定費を追加">
+              <Plus size={20} />
+            </button>
+          )}
         </header>
 
         {activeView === "dashboard" && renderDashboard()}
@@ -1922,7 +1914,7 @@ function CostCard({
           <CostLogo name={cost.name} category={cost.category} size="sm" />
           <div>
             <h3>{cost.name}</h3>
-            <p>{cost.category}・{cost.paymentMethod}</p>
+            <p>{cost.category}</p>
           </div>
         </div>
         <div className="cost-price">
@@ -2000,7 +1992,7 @@ function CompactCostCard({
         <CostLogo name={cost.name} category={cost.category} size="sm" />
         <div>
           <h3>{cost.name}</h3>
-          <p>{cost.category}・{cost.paymentMethod}</p>
+          <p>{cost.category}</p>
         </div>
       </div>
       <div className="compact-cost-amount">
@@ -2053,23 +2045,18 @@ function CostLogo({
 function providerBrand(provider: string): { mark: string; className: string; icon?: ReactNode } {
   switch (provider) {
     case "Apple Music":
-      return { mark: "AM", className: "logo-apple-music", icon: <Music size={20} /> };
-    case "Netflix":
-      return { mark: "N", className: "logo-netflix" };
-    case "Amazon":
-      return { mark: "a", className: "logo-amazon" };
     case "Spotify":
-      return { mark: "SP", className: "logo-spotify" };
+      return { mark: "音", className: "logo-music-service", icon: <Music size={20} /> };
+    case "Netflix":
     case "YouTube":
-      return { mark: "YT", className: "logo-youtube" };
     case "Disney+":
-      return { mark: "D+", className: "logo-disney" };
     case "U-NEXT":
-      return { mark: "UN", className: "logo-unext" };
     case "Hulu":
-      return { mark: "HU", className: "logo-hulu" };
+      return { mark: "映", className: "logo-video-service", icon: <Tv size={20} /> };
+    case "Amazon":
+      return { mark: "買", className: "logo-shopping-service", icon: <ShoppingBag size={20} /> };
     case "American Express":
-      return { mark: "AMEX", className: "logo-amex" };
+      return { mark: "決", className: "logo-card-service", icon: <WalletCards size={20} /> };
     default:
       return { mark: providerInitial(provider), className: "logo-generic" };
   }
