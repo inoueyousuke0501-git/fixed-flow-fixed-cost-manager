@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChartPie,
+  Crown,
   Database,
   Download,
   Edit3,
@@ -57,9 +58,12 @@ type Category =
   | "その他";
 type Priority = "low" | "medium" | "high";
 type ThemeMode = "light" | "dark";
-type View = "dashboard" | "list" | "editor" | "calendar" | "settings";
-type SortKey = "date" | "amount-desc" | "amount-asc" | "name";
+type View = "dashboard" | "list" | "editor" | "settings" | "appSettings" | "notifications";
+type SortKey = "date" | "amount-desc" | "created-desc" | "name";
 type EditorStep = "service" | "plan" | "form" | "details";
+type ContractFilter = "all" | "reviewing" | "confirmed";
+type DeadlineKind = "renewal" | "trialEnd" | "cancelBy" | "discountEnd" | "other";
+type ReminderDays = 0 | 1 | 3 | 7 | 30;
 
 type FixedCost = {
   id: string;
@@ -73,6 +77,8 @@ type FixedCost = {
   cancellationDate: string;
   memo: string;
   priority: Priority;
+  deadlineKind?: DeadlineKind;
+  reminderDays?: ReminderDays;
   createdAt: string;
   updatedAt: string;
 };
@@ -121,21 +127,37 @@ const cycleOptions: Array<{ value: BillingCycle; label: string; compact: string 
 ];
 
 const categories: Array<{ value: Category; label: Category; color: string }> = [
-  { value: "家賃", label: "家賃", color: "#2563eb" },
-  { value: "光熱費", label: "光熱費", color: "#eab308" },
-  { value: "通信費", label: "通信費", color: "#0891b2" },
-  { value: "サブスク", label: "サブスク", color: "#7c3aed" },
-  { value: "保険", label: "保険", color: "#059669" },
-  { value: "ローン", label: "ローン", color: "#dc2626" },
-  { value: "教育", label: "教育", color: "#ea580c" },
-  { value: "交通", label: "交通", color: "#475569" },
-  { value: "その他", label: "その他", color: "#64748b" },
+  { value: "家賃", label: "家賃", color: "#0a84ff" },
+  { value: "光熱費", label: "光熱費", color: "#0a84ff" },
+  { value: "通信費", label: "通信費", color: "#0a84ff" },
+  { value: "サブスク", label: "サブスク", color: "#0a84ff" },
+  { value: "保険", label: "保険", color: "#0a84ff" },
+  { value: "ローン", label: "ローン", color: "#0a84ff" },
+  { value: "教育", label: "教育", color: "#0a84ff" },
+  { value: "交通", label: "交通", color: "#0a84ff" },
+  { value: "その他", label: "その他", color: "#0a84ff" },
 ];
 
 const priorityOptions: Array<{ value: Priority; label: string; hint: string }> = [
   { value: "low", label: "低", hint: "そのままでもよい" },
   { value: "medium", label: "中", hint: "次の更新前に確認" },
   { value: "high", label: "高", hint: "早めに見直す" },
+];
+
+const deadlineKindOptions: Array<{ value: DeadlineKind; label: string }> = [
+  { value: "renewal", label: "更新日" },
+  { value: "trialEnd", label: "無料期間終了" },
+  { value: "cancelBy", label: "解約期限" },
+  { value: "discountEnd", label: "割引終了" },
+  { value: "other", label: "その他" },
+];
+
+const reminderOptions: Array<{ value: ReminderDays; label: string }> = [
+  { value: 0, label: "当日" },
+  { value: 1, label: "1日前" },
+  { value: 3, label: "3日前" },
+  { value: 7, label: "7日前" },
+  { value: 30, label: "30日前" },
 ];
 
 const categoryShortcuts: Array<{
@@ -403,7 +425,6 @@ const costPresets: CostPreset[] = [
 const viewTabs: Array<{ id: View; label: string; icon: ReactNode }> = [
   { id: "dashboard", label: "ホーム", icon: <LayoutDashboard size={18} /> },
   { id: "list", label: "契約", icon: <ListFilter size={18} /> },
-  { id: "calendar", label: "要対応", icon: <Bell size={18} /> },
   { id: "settings", label: "内訳", icon: <ChartPie size={18} /> },
 ];
 
@@ -596,6 +617,8 @@ function normalizeImportedCost(raw: Partial<FixedCost>, index: number): FixedCos
   const category = categories.some((item) => item.value === raw.category) ? raw.category! : "その他";
   const cycle = cycleOptions.some((item) => item.value === raw.cycle) ? raw.cycle! : "monthly";
   const priority = priorityOptions.some((item) => item.value === raw.priority) ? raw.priority! : "medium";
+  const deadlineKind = deadlineKindOptions.some((item) => item.value === raw.deadlineKind) ? raw.deadlineKind! : "renewal";
+  const reminderDays = reminderOptions.some((item) => item.value === raw.reminderDays) ? raw.reminderDays! : 3;
   const now = new Date().toISOString();
 
   return {
@@ -610,6 +633,8 @@ function normalizeImportedCost(raw: Partial<FixedCost>, index: number): FixedCos
     cancellationDate: raw.cancellationDate || "",
     memo: raw.memo || "",
     priority,
+    deadlineKind,
+    reminderDays,
     createdAt: raw.createdAt || now,
     updatedAt: raw.updatedAt || now,
   };
@@ -627,6 +652,8 @@ function emptyDraft(): CostDraft {
     cancellationDate: "",
     memo: "",
     priority: "medium",
+    deadlineKind: "renewal",
+    reminderDays: 3,
   };
 }
 
@@ -764,6 +791,8 @@ function buildSampleCosts(): FixedCost[] {
       cancellationDate: "",
       memo: "視聴していない月はローテーション解約候補。",
       priority: "medium",
+      deadlineKind: "trialEnd",
+      reminderDays: 3,
     },
     {
       name: "Amazon Prime 年間プラン",
@@ -776,6 +805,8 @@ function buildSampleCosts(): FixedCost[] {
       cancellationDate: "",
       memo: "公式料金を元に設定。月換算も確認。",
       priority: "low",
+      deadlineKind: "renewal",
+      reminderDays: 7,
     },
     {
       name: "アメックス・グリーン",
@@ -788,6 +819,8 @@ function buildSampleCosts(): FixedCost[] {
       cancellationDate: "",
       memo: "月会費。特典の利用実績を確認。",
       priority: "medium",
+      deadlineKind: "discountEnd",
+      reminderDays: 3,
     },
     {
       name: "奨学金返済",
@@ -869,6 +902,7 @@ export default function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<Category | "all">("all");
+  const [contractFilter, setContractFilter] = useState<ContractFilter>("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [listPage, setListPage] = useState(0);
@@ -888,7 +922,7 @@ export default function App() {
 
   useEffect(() => {
     setListPage(0);
-  }, [categoryFilter, costs.length, paymentFilter, query, sortKey]);
+  }, [categoryFilter, contractFilter, costs.length, paymentFilter, query, sortKey]);
 
   const today = useMemo(() => startOfDay(new Date()), []);
 
@@ -992,17 +1026,21 @@ export default function App() {
           `${cost.name} ${cost.memo} ${cost.paymentMethod}`.toLowerCase().includes(normalizedQuery);
         const matchesCategory = categoryFilter === "all" || cost.category === categoryFilter;
         const matchesPayment = paymentFilter === "all" || cost.paymentMethod === paymentFilter;
-        return matchesQuery && matchesCategory && matchesPayment;
+        const matchesStatus =
+          contractFilter === "all" ||
+          (contractFilter === "reviewing" && isReviewing(cost)) ||
+          (contractFilter === "confirmed" && !isReviewing(cost));
+        return matchesQuery && matchesCategory && matchesPayment && matchesStatus;
       })
       .sort((a, b) => {
         if (sortKey === "amount-desc") return b.amount - a.amount;
-        if (sortKey === "amount-asc") return a.amount - b.amount;
+        if (sortKey === "created-desc") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         if (sortKey === "name") return a.name.localeCompare(b.name, "ja");
         const aDate = nextOccurrenceDate(a, today)?.getTime() ?? Number.MAX_SAFE_INTEGER;
         const bDate = nextOccurrenceDate(b, today)?.getTime() ?? Number.MAX_SAFE_INTEGER;
         return aDate - bDate;
       });
-  }, [categoryFilter, costs, paymentFilter, query, sortKey, today]);
+  }, [categoryFilter, contractFilter, costs, paymentFilter, query, sortKey, today]);
 
   const listPageSize = 2;
   const listPageCount = Math.max(1, Math.ceil(filteredCosts.length / listPageSize));
@@ -1052,6 +1090,8 @@ export default function App() {
       cancellationDate: cost.cancellationDate,
       memo: cost.memo,
       priority: cost.priority,
+      deadlineKind: cost.deadlineKind ?? "renewal",
+      reminderDays: cost.reminderDays ?? 3,
     });
     setEditorStep("form");
     setActiveView("editor");
@@ -1236,9 +1276,11 @@ export default function App() {
   const renderDashboard = () => {
     const decisionItems = upcoming.slice(0, 3);
     const topCategories = categoryTotals.slice(0, 5);
-    const reviewingCount = costs.filter((cost) => cost.priority === "high").length;
+    const confirmedTotal = costs.filter((cost) => !isReviewing(cost)).reduce((sum, cost) => sum + monthlyEquivalent(cost), 0);
+    const reviewingTotal = costs.filter(isReviewing).reduce((sum, cost) => sum + monthlyEquivalent(cost), 0);
+    const reviewingCount = costs.filter(isReviewing).length;
     const trialCount = costs.filter((cost) => decisionKind(cost).variant === "danger").length;
-    const renewalCount = upcoming.filter((item) => item.days <= 30 && decisionKind(item.cost).variant === "info").length;
+    const renewalCount = upcoming.filter((item) => item.days <= 30 && decisionKind(item.cost).variant === "success").length;
     const unsetCount = costs.filter((cost) => !cost.cancellationDate).length;
 
     return (
@@ -1256,6 +1298,16 @@ export default function App() {
               <b>{formatCurrency.format(Math.round(annualTotal / 365))}</b>
             </span>
           </div>
+          <div className="monthly-card-status">
+            <span>
+              確定
+              <b>{formatCurrency.format(confirmedTotal)}</b>
+            </span>
+            <span>
+              見直し中
+              <b>{formatCurrency.format(reviewingTotal)}</b>
+            </span>
+          </div>
         </section>
 
         <section className="concept-section">
@@ -1266,7 +1318,7 @@ export default function App() {
                 <CostLogo name={item.cost.name} category={item.cost.category} size="md" />
                 <div>
                   <strong>{displayCostName(item.cost.name)}</strong>
-                  <span>{decisionKind(item.cost).label}</span>
+                  <span>{deadlineText(item.cost, item.days)}</span>
                   <em className={`deadline deadline-${deadlineTone(item.days)}`}>
                     {item.days === 0 ? "今日" : `あと${item.days}日`}
                   </em>
@@ -1304,7 +1356,7 @@ export default function App() {
               { label: "更新前", value: renewalCount, icon: <CalendarDays size={24} />, tone: "orange" },
               { label: "期限未設定", value: unsetCount, icon: <MoreHorizontal size={24} />, tone: "gray" },
             ].map((item) => (
-              <button className={`inventory-tile inventory-${item.tone}`} type="button" key={item.label} onClick={() => setActiveView(item.label === "期限未設定" ? "list" : "calendar")}>
+              <button className={`inventory-tile inventory-${item.tone}`} type="button" key={item.label} onClick={() => setActiveView("list")}>
                 {item.icon}
                 <span>{item.label}</span>
                 <strong>{item.value}件</strong>
@@ -1328,43 +1380,30 @@ export default function App() {
               placeholder="名称・メモで検索"
             />
           </label>
-          <label>
-            <Filter size={15} />
-            <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value as Category | "all")}>
-              <option value="all">全カテゴリ</option>
-              {categories.map((category) => (
-                <option value={category.value} key={category.value}>
-                  {category.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <WalletCards size={15} />
-            <select value={paymentFilter} onChange={(event) => setPaymentFilter(event.target.value)}>
-              <option value="all">全支払方法</option>
-              {paymentMethods.map((method) => (
-                <option value={method} key={method}>
-                  {method}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
+          <label className="sort-box">
             <ListFilter size={15} />
             <select value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)}>
-              <option value="date">支払日が近い順</option>
-              <option value="amount-desc">金額が高い順</option>
-              <option value="amount-asc">金額が低い順</option>
-              <option value="name">名称順</option>
+              <option value="date">期限が近い順</option>
+              <option value="amount-desc">月額が高い順</option>
+              <option value="created-desc">追加順</option>
             </select>
           </label>
         </div>
         <div className="contract-tabs">
-          <button className="active" type="button" onClick={() => setCategoryFilter("all")}>すべて</button>
-          <button type="button" onClick={() => setSortKey("amount-desc")}>見直し中</button>
-          <button type="button" onClick={() => setSortKey("date")}>期限あり</button>
-          <button type="button" onClick={() => setPaymentFilter("all")}>期限なし</button>
+          {[
+            { id: "all", label: "すべて" },
+            { id: "reviewing", label: "見直し中" },
+            { id: "confirmed", label: "確定" },
+          ].map((item) => (
+            <button
+              className={contractFilter === item.id ? "active" : ""}
+              type="button"
+              key={item.id}
+              onClick={() => setContractFilter(item.id as ContractFilter)}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
       </section>
 
@@ -1376,8 +1415,11 @@ export default function App() {
               <strong>{displayCostName(cost.name)}</strong>
               <span>{cost.category}</span>
               <b>{formatCurrency.format(monthlyEquivalent(cost))}/月</b>
+              <small>{deadlineText(cost, nextOccurrenceDate(cost, today) ? diffDays(today, nextOccurrenceDate(cost, today)!) : null)}</small>
             </div>
-            <em className={`status-pill status-${decisionKind(cost).variant}`}>{decisionKind(cost).label}</em>
+            <em className={`status-pill ${isReviewing(cost) ? "status-info" : "status-success"}`}>
+              {statusLabel(cost)}
+            </em>
             <ChevronRight size={18} />
           </button>
         ))}
@@ -1550,12 +1592,22 @@ export default function App() {
         )}
 
         {(editorStep === "form" || editorStep === "details") && (
-          <form className="editor-form" onSubmit={saveCost}>
+          <form id="cost-editor-form" className="editor-form" onSubmit={saveCost}>
             {editorStep === "form" ? (
               <>
                 <label className="field span-2">
                   <span>名称</span>
-                  <input value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} placeholder="例: Netflix" />
+                  <input value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} placeholder="例) Netflix スタンダード" />
+                </label>
+                <label className="field span-2">
+                  <span>カテゴリ</span>
+                  <select value={draft.category} onChange={(event) => updateDraft("category", event.target.value as Category)}>
+                    {categories.map((category) => (
+                      <option value={category.value} key={category.value}>
+                        {category.label}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label className="field">
                   <span>金額</span>
@@ -1568,6 +1620,17 @@ export default function App() {
                     onChange={(event) => updateDraft("amount", safeNumber(event.target.value))}
                   />
                 </label>
+                <div className="field">
+                  <span>月額 / 年額</span>
+                  <div className="segmented segmented-2">
+                    <button className={draft.cycle !== "yearly" ? "active" : ""} type="button" onClick={() => updateDraft("cycle", "monthly")}>
+                      月額
+                    </button>
+                    <button className={draft.cycle === "yearly" ? "active" : ""} type="button" onClick={() => updateDraft("cycle", "yearly")}>
+                      年額
+                    </button>
+                  </div>
+                </div>
                 <label className="field">
                   <span>支払周期</span>
                   <select value={draft.cycle} onChange={(event) => updateDraft("cycle", event.target.value as BillingCycle)}>
@@ -1578,8 +1641,19 @@ export default function App() {
                     ))}
                   </select>
                 </label>
+                <div className="field">
+                  <span>ステータス</span>
+                  <div className="segmented segmented-2">
+                    <button className={!isReviewing(draft) ? "active" : ""} type="button" onClick={() => updateDraft("priority", "low")}>
+                      確定
+                    </button>
+                    <button className={isReviewing(draft) ? "active" : ""} type="button" onClick={() => updateDraft("priority", "high")}>
+                      見直し中
+                    </button>
+                  </div>
+                </div>
                 <label className="field">
-                  <span>次回支払日</span>
+                  <span>判断期限</span>
                   <input
                     type="date"
                     value={draft.nextPaymentDate}
@@ -1587,11 +1661,30 @@ export default function App() {
                   />
                 </label>
                 <label className="field">
-                  <span>カテゴリ</span>
-                  <select value={draft.category} onChange={(event) => updateDraft("category", event.target.value as Category)}>
-                    {categories.map((category) => (
-                      <option value={category.value} key={category.value}>
-                        {category.label}
+                  <span>期限の種類</span>
+                  <select value={draft.deadlineKind ?? "renewal"} onChange={(event) => updateDraft("deadlineKind", event.target.value as DeadlineKind)}>
+                    {deadlineKindOptions.map((option) => (
+                      <option value={option.value} key={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field span-2">
+                  <span>メモ</span>
+                  <textarea
+                    value={draft.memo}
+                    onChange={(event) => updateDraft("memo", event.target.value)}
+                    rows={3}
+                    placeholder="契約条件、解約条件、見直し理由など"
+                  />
+                </label>
+                <label className="field span-2">
+                  <span>通知リマインド</span>
+                  <select value={draft.reminderDays ?? 3} onChange={(event) => updateDraft("reminderDays", Number(event.target.value) as ReminderDays)}>
+                    {reminderOptions.map((option) => (
+                      <option value={option.value} key={option.value}>
+                        {option.label}に通知
                       </option>
                     ))}
                   </select>
@@ -1654,11 +1747,6 @@ export default function App() {
               <button className="ghost-button" type="button" onClick={backFromForm}>
                 {editorStep === "details" || !editingId ? "戻る" : "キャンセル"}
               </button>
-              {editorStep === "form" && (
-                <button className="ghost-button" type="button" onClick={() => setEditorStep("details")}>
-                  詳細項目
-                </button>
-              )}
               <button className="primary-button" type="submit">
                 <Save size={16} />
                 保存
@@ -1718,7 +1806,8 @@ export default function App() {
     const ranked = costs
       .slice()
       .sort((a, b) => monthlyEquivalent(b) - monthlyEquivalent(a))
-      .slice(0, 3);
+      .slice(0, 5);
+    const reviewingMonthly = costs.filter(isReviewing).reduce((sum, cost) => sum + monthlyEquivalent(cost), 0);
 
     return (
       <div className="concept-screen detail-screen">
@@ -1737,31 +1826,19 @@ export default function App() {
           </div>
         </section>
 
-        <section className="concept-section donut-section">
+        <section className="concept-section breakdown-section">
           <h2>カテゴリ別内訳</h2>
-          <div className="donut-layout">
-            <div
-              className="donut-chart"
-              style={{
-                background: `conic-gradient(${categoryTotals
-                  .map((category, index) => {
-                    const start = categoryTotals.slice(0, index).reduce((sum, item) => sum + item.total, 0);
-                    const end = start + category.total;
-                    return `${category.color} ${(start / Math.max(1, monthlyTotal)) * 100}% ${(end / Math.max(1, monthlyTotal)) * 100}%`;
-                  })
-                  .join(", ")})`,
-              }}
-            />
-            <div className="donut-legend">
-              {categoryTotals.slice(0, 6).map((category) => (
-                <div key={category.value}>
-                  <span className="category-swatch" style={{ background: category.color }} />
-                  <strong>{category.label}</strong>
-                  <b>{formatCurrency.format(category.total)}</b>
-                  <small>{Math.round((category.total / Math.max(1, monthlyTotal)) * 100)}%</small>
-                </div>
-              ))}
-            </div>
+          <div className="breakdown-bars detail-bars">
+            {categoryTotals.slice(0, 6).map((category) => (
+              <div className="breakdown-row" key={category.value}>
+                <strong>{category.label}</strong>
+                <i>
+                  <span style={{ width: `${(category.total / maxCategoryTotal) * 100}%` }} />
+                </i>
+                <b>{formatCurrency.format(category.total)}</b>
+                <small>{Math.round((category.total / Math.max(1, monthlyTotal)) * 100)}%</small>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -1784,9 +1861,143 @@ export default function App() {
             <ChevronRight size={17} />
           </button>
         </section>
+
+        <button className="review-total-card" type="button" onClick={() => {
+          setContractFilter("reviewing");
+          setActiveView("list");
+        }}>
+          <div>
+            <strong>見直し中の月額合計</strong>
+            <span>見直し中の{costs.filter(isReviewing).length}件</span>
+          </div>
+          <b>{formatCurrency.format(reviewingMonthly)}/月</b>
+          <ChevronRight size={17} />
+        </button>
       </div>
     );
   };
+
+  const renderAppSettings = () => (
+    <div className="concept-screen settings-screen">
+      <section className="settings-group">
+        <h2>Pro</h2>
+        <button type="button" className="settings-row">
+          <Crown size={19} />
+          <div>
+            <strong>Proにアップグレード</strong>
+            <span>買い切りで登録件数・通知・データ管理を拡張</span>
+          </div>
+          <ChevronRight size={17} />
+        </button>
+        <div className="settings-row static">
+          <span>現在のプラン</span>
+          <b>無料プラン</b>
+        </div>
+        <div className="settings-row static">
+          <span>登録件数</span>
+          <b>{costs.length} / 10件</b>
+        </div>
+      </section>
+
+      <section className="settings-group">
+        <h2>通知</h2>
+        <button type="button" className="settings-row" onClick={() => setActiveView("notifications")}>
+          <Bell size={19} />
+          <div>
+            <strong>通知設定</strong>
+            <span>判断期限の3日前を標準に通知</span>
+          </div>
+          <ChevronRight size={17} />
+        </button>
+      </section>
+
+      <section className="settings-group">
+        <h2>データ</h2>
+        <button type="button" className="settings-row" onClick={exportJson}>
+          <Download size={19} />
+          <span>データのエクスポート</span>
+          <ChevronRight size={17} />
+        </button>
+        <label className="settings-row file-row">
+          <FileUp size={19} />
+          <span>データのインポート</span>
+          <input type="file" accept="application/json" onChange={importJson} />
+          <ChevronRight size={17} />
+        </label>
+      </section>
+
+      <section className="settings-group">
+        <h2>表示</h2>
+        <button className="settings-row" type="button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+          {theme === "dark" ? <Moon size={19} /> : <Sun size={19} />}
+          <span>ダークモード</span>
+          <b>{theme === "dark" ? "オン" : "オフ"}</b>
+        </button>
+        <div className="settings-row static">
+          <span>システム設定に合わせる</span>
+          <b>次期対応</b>
+        </div>
+      </section>
+
+      <section className="settings-group">
+        <h2>その他</h2>
+        {["プライバシーポリシー", "利用規約", "ヘルプ / お問い合わせ"].map((label) => (
+          <button className="settings-row" type="button" key={label}>
+            <span>{label}</span>
+            <ChevronRight size={17} />
+          </button>
+        ))}
+      </section>
+    </div>
+  );
+
+  const renderNotifications = () => (
+    <div className="concept-screen notification-screen">
+      <section className="settings-group">
+        <div className="settings-row static">
+          <div>
+            <strong>通知を許可する</strong>
+            <span>リマインダーや更新情報を受け取ります</span>
+          </div>
+          <span className="ios-switch on" />
+        </div>
+      </section>
+      <section className="settings-group">
+        <h2>リマインドのタイミング</h2>
+        <div className="segmented reminder-segment">
+          {reminderOptions.map((option) => (
+            <button className={option.value === 3 ? "active" : ""} type="button" key={option.value}>
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <div className="settings-row static">
+          <span>通知時刻</span>
+          <b>9:00</b>
+        </div>
+      </section>
+      <section className="settings-group">
+        <h2>通知する内容</h2>
+        {["更新日前リマインド", "無料期間終了リマインド", "解約期限リマインド", "割引終了リマインド", "見直し中のリマインド"].map((label) => (
+          <div className="settings-row static" key={label}>
+            <span>{label}</span>
+            <span className="ios-switch on" />
+          </div>
+        ))}
+      </section>
+      <section className="notification-preview">
+        <h2>通知プレビュー</h2>
+        <div className="preview-card">
+          <span className="preview-icon">費</span>
+          <div>
+            <strong>固定費マネージャー</strong>
+            <p>Netflix スタンダードの更新日が3日後です（5/31）</p>
+          </div>
+          <small>今</small>
+        </div>
+      </section>
+    </div>
+  );
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -1818,22 +2029,34 @@ export default function App() {
 
       <main>
         <header className="topbar">
+          {(activeView === "editor" || activeView === "appSettings" || activeView === "notifications") && (
+            <button className="plain-nav-button" type="button" onClick={() => setActiveView(activeView === "editor" ? "list" : "dashboard")}>
+              {activeView === "editor" ? "キャンセル" : "戻る"}
+            </button>
+          )}
           <div>
             <h1>{pageTitle(activeView)}</h1>
           </div>
-          {activeView === "dashboard" && <button className="month-chip" type="button">2026年5月⌄</button>}
+          {activeView === "dashboard" && (
+            <button className="icon-button concept-add-button" type="button" onClick={() => setActiveView("appSettings")} aria-label="設定">
+              <Settings size={20} />
+            </button>
+          )}
           {activeView === "list" && (
             <button className="icon-button concept-add-button" type="button" onClick={openCreate} aria-label="固定費を追加">
               <Plus size={20} />
             </button>
           )}
+          {activeView === "editor" && <button className="plain-nav-button" type="submit" form="cost-editor-form">保存</button>}
+          {(activeView === "appSettings" || activeView === "notifications") && <span className="topbar-spacer" />}
         </header>
 
         {activeView === "dashboard" && renderDashboard()}
         {activeView === "list" && renderList()}
         {activeView === "editor" && renderEditor()}
-        {activeView === "calendar" && renderCalendar()}
         {activeView === "settings" && renderSettings()}
+        {activeView === "appSettings" && renderAppSettings()}
+        {activeView === "notifications" && renderNotifications()}
       </main>
 
       <nav className="mobile-nav">
@@ -2105,21 +2328,48 @@ function priorityLabel(priority: Priority) {
   return "低";
 }
 
+function isReviewing(cost: Pick<FixedCost | CostDraft, "priority">) {
+  return cost.priority === "high";
+}
+
+function statusLabel(cost: Pick<FixedCost | CostDraft, "priority">) {
+  return isReviewing(cost) ? "見直し中" : "確定";
+}
+
+function deadlineKindLabel(kind: DeadlineKind | undefined) {
+  return deadlineKindOptions.find((option) => option.value === (kind ?? "renewal"))?.label ?? "更新日";
+}
+
+function deadlineText(cost: FixedCost | CostDraft, days: number | null) {
+  const prefix =
+    cost.deadlineKind === "trialEnd"
+      ? "無料体験終了"
+      : cost.deadlineKind === "cancelBy"
+        ? "解約期限"
+        : cost.deadlineKind === "discountEnd"
+          ? "割引終了"
+          : deadlineKindLabel(cost.deadlineKind);
+  if (days === null) return `${prefix}: 未設定`;
+  if (days === 0) return `${prefix}は今日`;
+  if (days < 0) return `${prefix}から${Math.abs(days)}日経過`;
+  return `${prefix}まであと${days}日`;
+}
+
 function decisionKind(cost: FixedCost) {
   const text = `${cost.name} ${cost.memo}`.toLowerCase();
-  if (text.includes("無料") || text.includes("trial")) {
+  if (cost.deadlineKind === "trialEnd" || text.includes("無料") || text.includes("trial")) {
     return { label: "無料体験終了", variant: "danger" as const };
   }
-  if (text.includes("割引")) {
+  if (cost.deadlineKind === "discountEnd" || text.includes("割引")) {
     return { label: "割引終了", variant: "warn" as const };
   }
-  if (cost.priority === "high") {
+  if (isReviewing(cost)) {
     return { label: "見直し中", variant: "info" as const };
   }
-  if (cost.cancellationDate) {
-    return { label: "解約予定", variant: "warn" as const };
+  if (cost.deadlineKind === "cancelBy" || cost.cancellationDate) {
+    return { label: "解約期限", variant: "warn" as const };
   }
-  return { label: "自動更新", variant: "success" as const };
+  return { label: "更新前", variant: "success" as const };
 }
 
 function deadlineTone(days: number) {
@@ -2146,11 +2396,13 @@ function pageTitle(view: View) {
     case "list":
       return "契約";
     case "editor":
-      return "追加・編集";
-    case "calendar":
-      return "要対応";
+      return "詳細を追加";
     case "settings":
       return "内訳";
+    case "appSettings":
+      return "設定";
+    case "notifications":
+      return "通知の設定";
   }
 }
 
