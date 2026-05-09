@@ -1,18 +1,21 @@
 import {
-  AlertTriangle,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  CircleDollarSign,
   Database,
   Download,
   Edit3,
   FileUp,
   Filter,
+  GraduationCap,
+  House,
+  Landmark,
   LayoutDashboard,
   ListFilter,
+  MoreHorizontal,
   Moon,
+  Music,
   Plus,
   RotateCcw,
   Save,
@@ -22,7 +25,11 @@ import {
   Sparkles,
   Sun,
   Trash2,
+  TrainFront,
+  Tv,
   WalletCards,
+  Wifi,
+  Zap,
 } from "lucide-react";
 import {
   type ChangeEvent,
@@ -49,6 +56,7 @@ type Priority = "low" | "medium" | "high";
 type ThemeMode = "light" | "dark";
 type View = "dashboard" | "list" | "editor" | "calendar" | "settings";
 type SortKey = "date" | "amount-desc" | "amount-asc" | "name";
+type EditorStep = "service" | "plan" | "form" | "details";
 
 type FixedCost = {
   id: string;
@@ -81,6 +89,22 @@ type CostPreset = {
   memo: string;
 };
 
+type ServiceTile =
+  | {
+      id: string;
+      kind: "provider";
+      provider: string;
+      label: string;
+      summary: string;
+    }
+  | {
+      id: string;
+      kind: "category";
+      category: Category;
+      label: string;
+      summary: string;
+    };
+
 const STORAGE_KEY = "fixed-flow-costs-v1";
 const THEME_KEY = "fixed-flow-theme";
 
@@ -109,6 +133,25 @@ const priorityOptions: Array<{ value: Priority; label: string; hint: string }> =
   { value: "low", label: "低", hint: "そのままでもよい" },
   { value: "medium", label: "中", hint: "次の更新前に確認" },
   { value: "high", label: "高", hint: "早めに見直す" },
+];
+
+const categoryShortcuts: Array<{
+  category: Category;
+  label: string;
+  name: string;
+  paymentMethod: string;
+  priority: Priority;
+  memo: string;
+}> = [
+  { category: "家賃", label: "家賃", name: "家賃", paymentMethod: "口座振替", priority: "high", memo: "更新月や管理費込みかをメモ。" },
+  { category: "光熱費", label: "光熱費", name: "光熱費", paymentMethod: "クレジットカード", priority: "medium", memo: "電気・ガス・水道など。" },
+  { category: "通信費", label: "通信費", name: "通信費", paymentMethod: "クレジットカード", priority: "high", memo: "スマホ・光回線・Wi-Fiなど。" },
+  { category: "サブスク", label: "その他サブスク", name: "サブスク", paymentMethod: "クレジットカード", priority: "medium", memo: "テンプレにないサービスを手入力。" },
+  { category: "保険", label: "保険", name: "保険", paymentMethod: "口座振替", priority: "medium", memo: "補償内容と更新月を確認。" },
+  { category: "ローン", label: "ローン", name: "ローン", paymentMethod: "口座振替", priority: "high", memo: "残高・金利・完済予定をメモ。" },
+  { category: "教育", label: "教育", name: "教育費", paymentMethod: "クレジットカード", priority: "medium", memo: "教材・スクール・学習サービスなど。" },
+  { category: "交通", label: "交通", name: "交通費", paymentMethod: "IC/カード", priority: "low", memo: "定期券・駐車場・車関連など。" },
+  { category: "その他", label: "その他", name: "固定費", paymentMethod: "未設定", priority: "medium", memo: "" },
 ];
 
 const costPresets: CostPreset[] = [
@@ -828,7 +871,7 @@ export default function App() {
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [listPage, setListPage] = useState(0);
   const [presetPage, setPresetPage] = useState(0);
-  const [editorStep, setEditorStep] = useState<"preset" | "form" | "details">("preset");
+  const [editorStep, setEditorStep] = useState<EditorStep>("service");
   const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()));
   const [selectedPresetProvider, setSelectedPresetProvider] = useState<string | null>(null);
 
@@ -852,9 +895,29 @@ export default function App() {
   }, [costs]);
 
   const presetGroups = useMemo(() => Object.entries(groupPresets()), []);
-  const presetPageSize = 4;
-  const presetPageCount = Math.max(1, Math.ceil(presetGroups.length / presetPageSize));
-  const visiblePresetGroups = presetGroups.slice(presetPage * presetPageSize, (presetPage + 1) * presetPageSize);
+  const serviceTiles = useMemo<ServiceTile[]>(() => {
+    const providerTiles = presetGroups.map(([provider, presets]) => {
+      const summary = presetSummary(presets);
+      return {
+        id: `provider-${provider}`,
+        kind: "provider" as const,
+        provider,
+        label: providerLabel(provider),
+        summary: `${presets.length}プラン・${formatCurrency.format(summary.minimum)}から`,
+      };
+    });
+    const fixedCostTiles = categoryShortcuts.map((shortcut) => ({
+      id: `category-${shortcut.category}`,
+      kind: "category" as const,
+      category: shortcut.category,
+      label: shortcut.label,
+      summary: "金額を入力",
+    }));
+    return [...providerTiles, ...fixedCostTiles];
+  }, [presetGroups]);
+  const presetPageSize = 6;
+  const presetPageCount = Math.max(1, Math.ceil(serviceTiles.length / presetPageSize));
+  const visibleServiceTiles = serviceTiles.slice(presetPage * presetPageSize, (presetPage + 1) * presetPageSize);
 
   const currentMonthOccurrences = useMemo(() => {
     return costs.flatMap((cost) =>
@@ -958,7 +1021,9 @@ export default function App() {
     if (view === "editor" && activeView !== "editor") {
       setEditingId(null);
       setDraft(emptyDraft());
-      setEditorStep("preset");
+      setSelectedPresetProvider(null);
+      setPresetPage(0);
+      setEditorStep("service");
     }
     setActiveView(view);
   }
@@ -968,7 +1033,7 @@ export default function App() {
     setDraft(emptyDraft());
     setSelectedPresetProvider(null);
     setPresetPage(0);
-    setEditorStep("preset");
+    setEditorStep("service");
     setActiveView("editor");
   }
 
@@ -992,6 +1057,40 @@ export default function App() {
 
   function updateDraft<K extends keyof CostDraft>(key: K, value: CostDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function selectPresetProvider(provider: string) {
+    const firstPreset = presetGroups.find(([itemProvider]) => itemProvider === provider)?.[1][0];
+    if (!firstPreset) return;
+    setSelectedPresetProvider(provider);
+    setDraft((current) => ({
+      ...current,
+      name: firstPreset.name,
+      amount: firstPreset.amount,
+      cycle: firstPreset.cycle,
+      category: firstPreset.category,
+      paymentMethod: firstPreset.paymentMethod,
+      memo: firstPreset.memo,
+      priority: firstPreset.priority,
+    }));
+    setEditorStep("plan");
+  }
+
+  function selectCategoryShortcut(category: Category) {
+    const shortcut = categoryShortcuts.find((item) => item.category === category);
+    if (!shortcut) return;
+    setSelectedPresetProvider(null);
+    setDraft((current) => ({
+      ...current,
+      name: shortcut.name,
+      amount: 0,
+      cycle: "monthly",
+      category: shortcut.category,
+      paymentMethod: shortcut.paymentMethod,
+      memo: shortcut.memo,
+      priority: shortcut.priority,
+    }));
+    setEditorStep("form");
   }
 
   function applyPreset(presetId: string) {
@@ -1046,7 +1145,8 @@ export default function App() {
 
     setDraft(emptyDraft());
     setEditingId(null);
-    setEditorStep("preset");
+    setSelectedPresetProvider(null);
+    setEditorStep("service");
     setActiveView("list");
   }
 
@@ -1172,6 +1272,7 @@ export default function App() {
 
         <section className="home-side">
           <article className="glass-tile next-tile">
+            {next && <CostLogo name={next.cost.name} category={next.cost.category} size="lg" />}
             <div>
               <p className="eyebrow">Next</p>
               <strong>{next ? next.cost.name : "支払予定なし"}</strong>
@@ -1181,6 +1282,7 @@ export default function App() {
           </article>
 
           <article className="glass-tile review-tile">
+            {review && <CostLogo name={review.cost.name} category={review.cost.category} size="lg" />}
             <div>
               <p className="eyebrow">Review</p>
               <strong>{review ? review.cost.name : "見直し候補なし"}</strong>
@@ -1198,9 +1300,6 @@ export default function App() {
               <p className="eyebrow">Breakdown</p>
               <h2>支出の重い順</h2>
             </div>
-            <button className="ghost-button" type="button" onClick={() => setActiveView("list")}>
-              詳細
-            </button>
           </div>
           <div className="category-mini-list">
             {topCategories.map((category) => (
@@ -1215,21 +1314,6 @@ export default function App() {
             ))}
           </div>
         </section>
-
-        <section className="home-actions">
-          <button className="action-tile primary-action" type="button" onClick={openCreate}>
-            <Plus size={18} />
-            <span>追加</span>
-          </button>
-          <button className="action-tile" type="button" onClick={() => setActiveView("calendar")}>
-            <CalendarDays size={18} />
-            <span>予定</span>
-          </button>
-          <button className="action-tile" type="button" onClick={() => setActiveView("settings")}>
-            <Database size={18} />
-            <span>保存</span>
-          </button>
-        </section>
       </div>
     );
   };
@@ -1242,10 +1326,6 @@ export default function App() {
             <p className="eyebrow">Fixed costs</p>
             <h2>固定費一覧</h2>
           </div>
-          <button className="primary-button" onClick={openCreate} type="button">
-            <Plus size={16} />
-            新規追加
-          </button>
         </div>
         <div className="toolbar">
           <label className="search-box">
@@ -1298,8 +1378,6 @@ export default function App() {
                   key={cost.id}
                   today={today}
                   onEdit={() => openEdit(cost)}
-                  onDelete={() => deleteCost(cost.id)}
-                  onAdvance={() => advancePayment(cost.id)}
                 />
               ))}
             </div>
@@ -1330,87 +1408,80 @@ export default function App() {
         ) : (
           <EmptyState
             title="条件に合う固定費がありません"
-            description="フィルターを外すか、新しい固定費を追加してください。"
-            action={
-              <button className="primary-button" onClick={openCreate} type="button">
-                <Plus size={16} />
-                追加する
-              </button>
-            }
+            description="フィルターを外すか、追加タブから新しい固定費を登録してください。"
           />
         )}
       </section>
     </div>
   );
 
-  const renderEditor = () => (
-    <section className={`panel editor-panel editor-step-${editorStep}`}>
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">{editingId ? "Edit" : "Add new"}</p>
-          <h2>{editingId ? "固定費を編集" : "固定費を追加"}</h2>
-        </div>
-        {editingId && (
-          <button className="danger-ghost-button" onClick={() => deleteCost(editingId)} type="button">
-            <Trash2 size={16} />
-            削除
-          </button>
-        )}
-      </div>
+  const renderEditor = () => {
+    const selectedPresets = selectedPresetProvider
+      ? presetGroups.find(([provider]) => provider === selectedPresetProvider)?.[1] ?? []
+      : [];
 
-      {editorStep === "preset" && (
-      <div className="preset-picker">
-        <div className="preset-picker-head">
-          <div>
-            <p className="eyebrow">Templates</p>
-            <h3>よく使う固定費から選ぶ</h3>
+    const backFromForm = () => {
+      if (editorStep === "details") {
+        setEditorStep("form");
+        return;
+      }
+      if (editingId) {
+        setActiveView("list");
+        return;
+      }
+      setEditorStep(selectedPresetProvider ? "plan" : "service");
+    };
+
+    return (
+      <section className={`panel editor-panel editor-step-${editorStep}`}>
+        {editingId && (
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Edit</p>
+              <h2>固定費を編集</h2>
+            </div>
+            <button className="danger-ghost-button" onClick={() => deleteCost(editingId)} type="button">
+              <Trash2 size={16} />
+              削除
+            </button>
           </div>
-          <span>金額はあとから編集できます</span>
-        </div>
-        {selectedPresetProvider ? (
-          <div className="plan-drawer">
-            <div className="plan-drawer-head">
+        )}
+
+        {editorStep === "service" && (
+          <div className="preset-picker service-picker">
+            <div className="preset-picker-head">
               <div>
-                <strong>{selectedPresetProvider}</strong>
-                <span>{presetGroups.find(([provider]) => provider === selectedPresetProvider)?.[1].length ?? 0}プラン</span>
+                <p className="eyebrow">Choose</p>
+                <h3>ロゴ・アイコンから選ぶ</h3>
               </div>
-              <button className="ghost-button" type="button" onClick={() => setSelectedPresetProvider(null)}>
-                変更
-              </button>
+              <span>プランは次の画面で選択</span>
             </div>
-            <div className="plan-tile-grid">
-              {(presetGroups.find(([provider]) => provider === selectedPresetProvider)?.[1] ?? []).map((preset) => {
-                const isApplied = draft.name === preset.name && draft.amount === preset.amount && draft.cycle === preset.cycle;
-                return (
+            <div className="service-tile-grid">
+              {visibleServiceTiles.map((tile) =>
+                tile.kind === "provider" ? (
                   <button
-                    className={`plan-tile ${isApplied ? "active" : ""}`}
+                    className="service-choice-tile"
                     type="button"
-                    key={preset.id}
-                    onClick={() => applyPreset(preset.id)}
+                    key={tile.id}
+                    onClick={() => selectPresetProvider(tile.provider)}
                   >
-                    <span>{preset.plan}</span>
-                    <strong>{formatCurrency.format(preset.amount)}</strong>
-                    <small>{cycleCompact(preset.cycle)}</small>
+                    <CostLogo provider={tile.provider} size="xl" />
+                    <strong>{tile.label}</strong>
+                    <small>{tile.summary}</small>
                   </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="provider-tile-grid">
-              {visiblePresetGroups.map(([provider, presets]) => {
-                const summary = presetSummary(presets);
-                return (
-                  <button className="provider-tile" type="button" key={provider} onClick={() => setSelectedPresetProvider(provider)}>
-                    <span className="provider-mark">{providerInitial(provider)}</span>
-                    <strong>{provider}</strong>
-                    <small>
-                      {presets.length}プラン・{formatCurrency.format(summary.minimum)}から
-                    </small>
+                ) : (
+                  <button
+                    className="service-choice-tile"
+                    type="button"
+                    key={tile.id}
+                    onClick={() => selectCategoryShortcut(tile.category)}
+                  >
+                    <CostLogo category={tile.category} size="xl" />
+                    <strong>{tile.label}</strong>
+                    <small>{tile.summary}</small>
                   </button>
-                );
-              })}
+                ),
+              )}
             </div>
             <div className="mini-pager">
               <button
@@ -1431,152 +1502,217 @@ export default function App() {
                 <ChevronRight size={15} />
               </button>
             </div>
-          </>
+          </div>
         )}
-        <button className="primary-button manual-entry-button" type="button" onClick={() => setEditorStep("form")}>
-          <Edit3 size={16} />
-          手入力で追加
-        </button>
-      </div>
-      )}
 
-      {editorStep !== "preset" && (
-      <form className="editor-form" onSubmit={saveCost}>
-        {editorStep === "form" ? (
-          <>
-        <label className="field span-2">
-          <span>名称</span>
-          <input value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} placeholder="例: Netflix" />
-        </label>
-        <label className="field">
-          <span>金額</span>
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            min="0"
-            value={draft.amount}
-            onChange={(event) => updateDraft("amount", safeNumber(event.target.value))}
-          />
-        </label>
-        <label className="field">
-          <span>支払周期</span>
-          <select value={draft.cycle} onChange={(event) => updateDraft("cycle", event.target.value as BillingCycle)}>
-            {cycleOptions.map((option) => (
-              <option value={option.value} key={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>次回支払日</span>
-          <input
-            type="date"
-            value={draft.nextPaymentDate}
-            onChange={(event) => updateDraft("nextPaymentDate", event.target.value)}
-          />
-        </label>
-        <label className="field">
-          <span>カテゴリ</span>
-          <select value={draft.category} onChange={(event) => updateDraft("category", event.target.value as Category)}>
-            {categories.map((category) => (
-              <option value={category.value} key={category.value}>
-                {category.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>支払方法</span>
-          <input
-            value={draft.paymentMethod}
-            onChange={(event) => updateDraft("paymentMethod", event.target.value)}
-            placeholder="例: 楽天カード"
-            list="payment-methods"
-          />
-          <datalist id="payment-methods">
-            {paymentMethods.map((method) => (
-              <option value={method} key={method} />
-            ))}
-          </datalist>
-        </label>
-          </>
-        ) : (
-          <>
-        <label className="field">
-          <span>契約開始日</span>
-          <input type="date" value={draft.startDate} onChange={(event) => updateDraft("startDate", event.target.value)} />
-        </label>
-        <label className="field">
-          <span>解約予定日</span>
-          <input
-            type="date"
-            value={draft.cancellationDate}
-            onChange={(event) => updateDraft("cancellationDate", event.target.value)}
-          />
-        </label>
-        <div className="field span-2">
-          <span>見直し優先度</span>
-          <div className="segmented">
-            {priorityOptions.map((option) => (
+        {editorStep === "plan" && selectedPresetProvider && (
+          <div className="preset-picker plan-picker">
+            <div className="plan-drawer-head">
+              <div className="selected-service-head">
+                <CostLogo provider={selectedPresetProvider} size="lg" />
+                <div>
+                  <p className="eyebrow">Plan</p>
+                  <h3>{providerLabel(selectedPresetProvider)}</h3>
+                  <span>料金プランを選ぶか、金額を手入力できます</span>
+                </div>
+              </div>
               <button
-                className={draft.priority === option.value ? "active" : ""}
+                className="ghost-button"
                 type="button"
-                key={option.value}
-                onClick={() => updateDraft("priority", option.value)}
-                title={option.hint}
+                onClick={() => {
+                  setSelectedPresetProvider(null);
+                  setEditorStep("service");
+                }}
               >
-                {option.label}
+                選び直す
               </button>
-            ))}
+            </div>
+            <div className="plan-tile-grid">
+              {selectedPresets.map((preset) => {
+                const isApplied = draft.name === preset.name && draft.amount === preset.amount && draft.cycle === preset.cycle;
+                return (
+                  <button
+                    className={`plan-tile ${isApplied ? "active" : ""}`}
+                    type="button"
+                    key={preset.id}
+                    onClick={() => applyPreset(preset.id)}
+                  >
+                    <span>{preset.plan}</span>
+                    <strong>{formatCurrency.format(preset.amount)}</strong>
+                    <small>{cycleCompact(preset.cycle)}</small>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="custom-plan-box">
+              <div>
+                <strong>金額を手入力</strong>
+                <span>キャンペーン価格、家族割、年払いなどはここで調整できます。</span>
+              </div>
+              <div className="custom-plan-controls">
+                <label className="field">
+                  <span>金額</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    min="0"
+                    value={draft.amount}
+                    onChange={(event) => updateDraft("amount", safeNumber(event.target.value))}
+                  />
+                </label>
+                <label className="field">
+                  <span>周期</span>
+                  <select value={draft.cycle} onChange={(event) => updateDraft("cycle", event.target.value as BillingCycle)}>
+                    {cycleOptions.map((option) => (
+                      <option value={option.value} key={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button className="primary-button" type="button" onClick={() => setEditorStep("form")}>
+                  入力へ
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-        <label className="field span-2">
-          <span>メモ</span>
-          <textarea
-            value={draft.memo}
-            onChange={(event) => updateDraft("memo", event.target.value)}
-            rows={4}
-            placeholder="利用頻度、更新月、解約条件、割引の有無など"
-          />
-        </label>
-          </>
         )}
-        <div className="form-summary span-2">
-          <div>
-            <span>月額換算</span>
-            <strong>{formatCurrency.format(monthlyEquivalent(draft))}</strong>
-          </div>
-          <div>
-            <span>年額インパクト</span>
-            <strong>
-              {formatCurrency.format(draft.cycle === "one-time" ? draft.amount : monthlyEquivalent(draft) * 12)}
-            </strong>
-          </div>
-        </div>
-        <div className="form-actions span-2">
-          <button
-            className="ghost-button"
-            type="button"
-            onClick={() => (editorStep === "details" ? setEditorStep("form") : setActiveView(editingId ? "list" : "dashboard"))}
-          >
-            {editorStep === "details" ? "戻る" : "キャンセル"}
-          </button>
-          {editorStep === "form" && (
-            <button className="ghost-button" type="button" onClick={() => setEditorStep("details")}>
-              詳細項目
-            </button>
-          )}
-          <button className="primary-button" type="submit">
-            <Save size={16} />
-            保存
-          </button>
-        </div>
-      </form>
-      )}
-    </section>
-  );
+
+        {(editorStep === "form" || editorStep === "details") && (
+          <form className="editor-form" onSubmit={saveCost}>
+            {editorStep === "form" ? (
+              <>
+                <label className="field span-2">
+                  <span>名称</span>
+                  <input value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} placeholder="例: Netflix" />
+                </label>
+                <label className="field">
+                  <span>金額</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    min="0"
+                    value={draft.amount}
+                    onChange={(event) => updateDraft("amount", safeNumber(event.target.value))}
+                  />
+                </label>
+                <label className="field">
+                  <span>支払周期</span>
+                  <select value={draft.cycle} onChange={(event) => updateDraft("cycle", event.target.value as BillingCycle)}>
+                    {cycleOptions.map((option) => (
+                      <option value={option.value} key={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>次回支払日</span>
+                  <input
+                    type="date"
+                    value={draft.nextPaymentDate}
+                    onChange={(event) => updateDraft("nextPaymentDate", event.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <span>カテゴリ</span>
+                  <select value={draft.category} onChange={(event) => updateDraft("category", event.target.value as Category)}>
+                    {categories.map((category) => (
+                      <option value={category.value} key={category.value}>
+                        {category.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>支払方法</span>
+                  <input
+                    value={draft.paymentMethod}
+                    onChange={(event) => updateDraft("paymentMethod", event.target.value)}
+                    placeholder="例: 楽天カード"
+                    list="payment-methods"
+                  />
+                  <datalist id="payment-methods">
+                    {paymentMethods.map((method) => (
+                      <option value={method} key={method} />
+                    ))}
+                  </datalist>
+                </label>
+              </>
+            ) : (
+              <>
+                <label className="field">
+                  <span>契約開始日</span>
+                  <input type="date" value={draft.startDate} onChange={(event) => updateDraft("startDate", event.target.value)} />
+                </label>
+                <label className="field">
+                  <span>解約予定日</span>
+                  <input
+                    type="date"
+                    value={draft.cancellationDate}
+                    onChange={(event) => updateDraft("cancellationDate", event.target.value)}
+                  />
+                </label>
+                <div className="field span-2">
+                  <span>見直し優先度</span>
+                  <div className="segmented">
+                    {priorityOptions.map((option) => (
+                      <button
+                        className={draft.priority === option.value ? "active" : ""}
+                        type="button"
+                        key={option.value}
+                        onClick={() => updateDraft("priority", option.value)}
+                        title={option.hint}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <label className="field span-2">
+                  <span>メモ</span>
+                  <textarea
+                    value={draft.memo}
+                    onChange={(event) => updateDraft("memo", event.target.value)}
+                    rows={4}
+                    placeholder="利用頻度、更新月、解約条件、割引の有無など"
+                  />
+                </label>
+              </>
+            )}
+            <div className="form-summary span-2">
+              <div>
+                <span>月額換算</span>
+                <strong>{formatCurrency.format(monthlyEquivalent(draft))}</strong>
+              </div>
+              <div>
+                <span>年額インパクト</span>
+                <strong>
+                  {formatCurrency.format(draft.cycle === "one-time" ? draft.amount : monthlyEquivalent(draft) * 12)}
+                </strong>
+              </div>
+            </div>
+            <div className="form-actions span-2">
+              <button className="ghost-button" type="button" onClick={backFromForm}>
+                {editorStep === "details" || !editingId ? "戻る" : "キャンセル"}
+              </button>
+              {editorStep === "form" && (
+                <button className="ghost-button" type="button" onClick={() => setEditorStep("details")}>
+                  詳細項目
+                </button>
+              )}
+              <button className="primary-button" type="submit">
+                <Save size={16} />
+                保存
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
+    );
+  };
 
   const renderCalendar = () => {
     const first = startOfMonth(calendarMonth);
@@ -1731,15 +1867,13 @@ export default function App() {
                 key={provider}
                 type="button"
                 onClick={() => {
-                  setSelectedPresetProvider(provider);
                   setEditingId(null);
-                  setDraft(emptyDraft());
-                  setEditorStep("preset");
+                  selectPresetProvider(provider);
                   setActiveView("editor");
                 }}
               >
-                <span className="provider-mark">{providerInitial(provider)}</span>
-                <strong>{provider}</strong>
+                <CostLogo provider={provider} size="sm" />
+                <strong>{providerLabel(provider)}</strong>
                 <small>
                   {presets.length}プラン・{formatCurrency.format(summary.minimum)}から
                 </small>
@@ -1786,18 +1920,6 @@ export default function App() {
             <p className="eyebrow">Local first PWA</p>
             <h1>{pageTitle(activeView)}</h1>
           </div>
-          <div className="topbar-actions">
-            <button className="ghost-button desktop-only" type="button" onClick={() => setActiveView("settings")}>
-              <Database size={16} />
-              データ
-            </button>
-            {activeView !== "editor" && (
-              <button className="primary-button" type="button" onClick={openCreate}>
-                <Plus size={16} />
-                追加
-              </button>
-            )}
-          </div>
         </header>
 
         {activeView === "dashboard" && renderDashboard()}
@@ -1842,14 +1964,13 @@ function CostCard({
   const days = next ? diffDays(today, next) : null;
   const monthly = monthlyEquivalent(cost);
   const annual = cost.cycle === "one-time" ? cost.amount : monthly * 12;
-  const category = categories.find((item) => item.value === cost.category);
   const weightClass = monthly >= 8000 ? "heavy" : monthly >= 2500 ? "medium" : "light";
 
   return (
     <article className={`cost-card weight-${weightClass}`}>
       <div className="cost-card-main">
         <div className="cost-title-row">
-          <span className="category-swatch" style={{ background: category?.color }} />
+          <CostLogo name={cost.name} category={cost.category} size="sm" />
           <div>
             <h3>{cost.name}</h3>
             <p>{cost.category}・{cost.paymentMethod}</p>
@@ -1904,24 +2025,30 @@ function CompactCostCard({
   cost,
   today,
   onEdit,
-  onDelete,
-  onAdvance,
 }: {
   cost: FixedCost;
   today: Date;
   onEdit: () => void;
-  onDelete: () => void;
-  onAdvance: () => void;
 }) {
   const next = nextOccurrenceDate(cost, today);
   const days = next ? diffDays(today, next) : null;
   const monthly = monthlyEquivalent(cost);
-  const category = categories.find((item) => item.value === cost.category);
 
   return (
-    <article className="compact-cost-card">
+    <article
+      className="compact-cost-card"
+      onClick={onEdit}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onEdit();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+    >
       <div className="compact-cost-main">
-        <span className="category-swatch" style={{ background: category?.color }} />
+        <CostLogo name={cost.name} category={cost.category} size="sm" />
         <div>
           <h3>{cost.name}</h3>
           <p>{cost.category}・{cost.paymentMethod}</p>
@@ -1936,21 +2063,104 @@ function CompactCostCard({
         <span>月換算 {formatCurrency.format(monthly)}</span>
         <span className={`priority-text priority-${cost.priority}`}>見直し {priorityLabel(cost.priority)}</span>
       </div>
-      <div className="compact-cost-actions">
-        {cycleMonths(cost.cycle) && (
-          <button className="icon-button" type="button" onClick={onAdvance} aria-label={`${cost.name}を次回へ進める`}>
-            <CheckCircle2 size={15} />
-          </button>
-        )}
-        <button className="icon-button" type="button" onClick={onEdit} aria-label={`${cost.name}を編集`}>
-          <Edit3 size={15} />
-        </button>
-        <button className="icon-button danger-icon-button" type="button" onClick={onDelete} aria-label={`${cost.name}を削除`}>
-          <Trash2 size={15} />
-        </button>
-      </div>
     </article>
   );
+}
+
+function CostLogo({
+  provider,
+  name,
+  category,
+  size = "md",
+}: {
+  provider?: string | null;
+  name?: string;
+  category?: Category;
+  size?: "sm" | "md" | "lg" | "xl";
+}) {
+  const resolvedProvider = provider ?? (name ? providerFromCostName(name) : null);
+
+  if (resolvedProvider) {
+    const brand = providerBrand(resolvedProvider);
+    return (
+      <span className={`cost-logo cost-logo-${size} ${brand.className}`} aria-hidden="true">
+        {brand.icon ?? <span>{brand.mark}</span>}
+      </span>
+    );
+  }
+
+  const categoryInfo = categories.find((item) => item.value === category);
+  return (
+    <span
+      className={`cost-logo cost-logo-${size} category-logo`}
+      style={{ "--logo-accent": categoryInfo?.color ?? "#64748b" } as CSSProperties}
+      aria-hidden="true"
+    >
+      {categoryIcon(category, size === "xl" ? 28 : size === "lg" ? 22 : 16)}
+    </span>
+  );
+}
+
+function providerBrand(provider: string): { mark: string; className: string; icon?: ReactNode } {
+  switch (provider) {
+    case "Apple Music":
+      return { mark: "AM", className: "logo-apple-music", icon: <Music size={20} /> };
+    case "Netflix":
+      return { mark: "N", className: "logo-netflix" };
+    case "Amazon":
+      return { mark: "a", className: "logo-amazon" };
+    case "Spotify":
+      return { mark: "SP", className: "logo-spotify" };
+    case "YouTube":
+      return { mark: "YT", className: "logo-youtube" };
+    case "Disney+":
+      return { mark: "D+", className: "logo-disney" };
+    case "U-NEXT":
+      return { mark: "UN", className: "logo-unext" };
+    case "Hulu":
+      return { mark: "HU", className: "logo-hulu" };
+    case "American Express":
+      return { mark: "AMEX", className: "logo-amex" };
+    default:
+      return { mark: providerInitial(provider), className: "logo-generic" };
+  }
+}
+
+function providerFromCostName(name: string) {
+  const normalized = name.toLowerCase();
+  if (normalized.includes("apple music")) return "Apple Music";
+  if (normalized.includes("netflix")) return "Netflix";
+  if (normalized.includes("amazon")) return "Amazon";
+  if (normalized.includes("spotify")) return "Spotify";
+  if (normalized.includes("youtube")) return "YouTube";
+  if (normalized.includes("disney")) return "Disney+";
+  if (normalized.includes("u-next") || normalized.includes("unext")) return "U-NEXT";
+  if (normalized.includes("hulu")) return "Hulu";
+  if (name.includes("アメックス") || normalized.includes("american express") || normalized.includes("amex")) return "American Express";
+  return null;
+}
+
+function categoryIcon(category: Category | undefined, size: number) {
+  switch (category) {
+    case "家賃":
+      return <House size={size} />;
+    case "光熱費":
+      return <Zap size={size} />;
+    case "通信費":
+      return <Wifi size={size} />;
+    case "サブスク":
+      return <Tv size={size} />;
+    case "保険":
+      return <ShieldCheck size={size} />;
+    case "ローン":
+      return <Landmark size={size} />;
+    case "教育":
+      return <GraduationCap size={size} />;
+    case "交通":
+      return <TrainFront size={size} />;
+    default:
+      return <MoreHorizontal size={size} />;
+  }
 }
 
 function priorityLabel(priority: Priority) {
@@ -1986,6 +2196,10 @@ function presetSummary(presets: CostPreset[]) {
   return {
     minimum: Math.min(...presets.map((preset) => preset.amount)),
   };
+}
+
+function providerLabel(provider: string) {
+  return provider === "American Express" ? "AMEX" : provider;
 }
 
 function providerInitial(provider: string) {

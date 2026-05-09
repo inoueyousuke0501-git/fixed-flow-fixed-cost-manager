@@ -380,7 +380,7 @@ main {
 
 .glass-tile {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   min-height: 0;
@@ -391,19 +391,23 @@ main {
   padding: 16px;
 }
 
-.glass-tile strong,
-.glass-tile span {
+.glass-tile > div {
+  min-width: 0;
+}
+
+.glass-tile > div strong,
+.glass-tile > div span {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.glass-tile strong {
+.glass-tile > div strong {
   font-size: 20px;
 }
 
-.glass-tile span {
+.glass-tile > div span {
   margin-top: 5px;
   color: var(--muted);
   font-size: 13px;
@@ -682,6 +686,106 @@ main {
   border-radius: 3px;
 }
 
+.cost-logo {
+  --logo-accent: var(--text);
+  --logo-text: var(--surface);
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--logo-accent) 72%, var(--line));
+  border-radius: 8px;
+  background: var(--logo-accent);
+  color: var(--logo-text);
+  font-weight: 950;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.cost-logo span {
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.cost-logo-sm {
+  width: 30px;
+  height: 30px;
+}
+
+.cost-logo-md {
+  width: 38px;
+  height: 38px;
+}
+
+.cost-logo-lg {
+  width: 46px;
+  height: 46px;
+}
+
+.cost-logo-xl {
+  width: 54px;
+  height: 54px;
+  border-radius: 10px;
+}
+
+.cost-logo-xl span {
+  font-size: 14px;
+}
+
+.category-logo {
+  background: color-mix(in srgb, var(--logo-accent) 14%, var(--surface));
+  color: var(--logo-accent);
+}
+
+.logo-apple-music {
+  --logo-accent: #fa586a;
+  --logo-text: #fff;
+}
+
+.logo-netflix {
+  --logo-accent: #e50914;
+  --logo-text: #fff;
+}
+
+.logo-amazon {
+  --logo-accent: #232f3e;
+  --logo-text: #ff9900;
+}
+
+.logo-spotify {
+  --logo-accent: #1db954;
+  --logo-text: #08130c;
+}
+
+.logo-youtube {
+  --logo-accent: #ff0033;
+  --logo-text: #fff;
+}
+
+.logo-disney {
+  --logo-accent: #113ccf;
+  --logo-text: #fff;
+}
+
+.logo-unext {
+  --logo-accent: #111827;
+  --logo-text: #fff;
+}
+
+.logo-hulu {
+  --logo-accent: #1ce783;
+  --logo-text: #08130c;
+}
+
+.logo-amex {
+  --logo-accent: #2e77bc;
+  --logo-text: #fff;
+}
+
+.logo-generic {
+  --logo-accent: var(--text);
+  --logo-text: var(--surface);
+}
+
 .category-bar-wrap {
   height: 10px;
   overflow: hidden;
@@ -832,14 +936,19 @@ main {
 
 .compact-cost-card {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) auto auto;
+  grid-template-columns: minmax(0, 1.2fr) auto;
   align-items: center;
   gap: 12px;
-  min-height: 104px;
+  min-height: 96px;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
+  cursor: pointer;
+}
+
+.compact-cost-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
 }
 
 .compact-cost-main {
@@ -879,13 +988,10 @@ main {
 
 .compact-cost-meta {
   display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   min-width: 150px;
   gap: 4px;
-}
-
-.compact-cost-actions {
-  gap: 6px;
-  justify-content: flex-end;
 }
 
 .danger-icon-button {
@@ -1204,7 +1310,6 @@ button:disabled {
 .preset-picker {
   display: grid;
   gap: 12px;
-  margin-bottom: 18px;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1224,7 +1329,8 @@ button:disabled {
   gap: 3px;
 }
 
-.preset-picker-head h3 {
+.preset-picker-head h3,
+.plan-drawer-head h3 {
   margin: 0;
   font-size: 18px;
   line-height: 1.2;
@@ -1241,6 +1347,44 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 9px;
+}
+
+.service-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.service-choice-tile {
+  display: grid;
+  min-width: 0;
+  min-height: 112px;
+  place-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.service-choice-tile strong,
+.service-choice-tile small {
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-choice-tile strong {
+  font-size: 14px;
+}
+
+.service-choice-tile small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .provider-tile {
@@ -1279,6 +1423,10 @@ button:disabled {
   font-weight: 900;
 }
 
+.provider-tile .cost-logo {
+  grid-area: mark;
+}
+
 .provider-tile strong {
   grid-area: name;
   overflow: hidden;
@@ -1302,6 +1450,17 @@ button:disabled {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
+}
+
+.selected-service-head {
+  display: flex !important;
+  align-items: center;
+  gap: 12px !important;
+  min-width: 0;
+}
+
+.selected-service-head > div {
+  min-width: 0;
 }
 
 .plan-tile-grid {
@@ -1335,6 +1494,33 @@ button:disabled {
 .plan-tile strong {
   font-size: 18px;
   line-height: 1.15;
+}
+
+.custom-plan-box {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+}
+
+.custom-plan-box > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.custom-plan-box span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.custom-plan-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
 }
 
 .preset-hint {
@@ -1423,6 +1609,10 @@ button:disabled {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .service-tile-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .plan-tile-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1501,17 +1691,23 @@ button:disabled {
 
   .glass-tile {
     align-items: start;
-    grid-template-columns: 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
     min-height: 92px;
     padding: 12px;
   }
 
-  .glass-tile strong,
+  .glass-tile b,
+  .glass-tile .icon-button {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .glass-tile > div strong,
   .glass-tile b {
     font-size: 15px;
   }
 
-  .glass-tile span {
+  .glass-tile > div span {
     font-size: 11px;
   }
 
@@ -1647,14 +1843,79 @@ button:disabled {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .service-tile-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .service-choice-tile {
+    min-height: 94px;
+    padding: 10px 6px;
+  }
+
+  .service-choice-tile strong {
+    font-size: 12px;
+  }
+
+  .service-choice-tile small {
+    font-size: 10px;
+  }
+
   .plan-tile-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .custom-plan-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .custom-plan-controls .primary-button {
+    grid-column: 1 / -1;
   }
 
   .preset-picker-head,
   .plan-drawer-head {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .plan-picker .plan-drawer-head {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .plan-picker .plan-drawer-head .ghost-button {
+    width: auto;
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 0 10px;
+  }
+
+  .plan-picker .selected-service-head {
+    gap: 8px !important;
+  }
+
+  .plan-picker .cost-logo-lg {
+    width: 38px;
+    height: 38px;
+  }
+
+  .plan-picker .plan-tile {
+    min-height: 66px;
+    padding: 8px;
+  }
+
+  .plan-picker .plan-tile strong {
+    font-size: 17px;
+  }
+
+  .plan-picker .custom-plan-box {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .plan-picker .custom-plan-box > div:first-child span {
+    display: none;
   }
 
   .cost-card-main,
