@@ -1,8 +1,10 @@
 import {
+  Bell,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ChartPie,
   Database,
   Download,
   Edit3,
@@ -398,11 +400,10 @@ const costPresets: CostPreset[] = [
 ];
 
 const viewTabs: Array<{ id: View; label: string; icon: ReactNode }> = [
-  { id: "dashboard", label: "ダッシュボード", icon: <LayoutDashboard size={18} /> },
-  { id: "list", label: "固定費一覧", icon: <ListFilter size={18} /> },
-  { id: "editor", label: "追加・編集", icon: <Plus size={18} /> },
-  { id: "calendar", label: "カレンダー", icon: <CalendarDays size={18} /> },
-  { id: "settings", label: "設定", icon: <Settings size={18} /> },
+  { id: "dashboard", label: "ホーム", icon: <LayoutDashboard size={18} /> },
+  { id: "list", label: "契約", icon: <ListFilter size={18} /> },
+  { id: "calendar", label: "要対応", icon: <Bell size={18} /> },
+  { id: "settings", label: "内訳", icon: <ChartPie size={18} /> },
 ];
 
 const formatCurrency = new Intl.NumberFormat("ja-JP", {
@@ -1232,85 +1233,81 @@ export default function App() {
   }
 
   const renderDashboard = () => {
-    const next = upcoming[0];
-    const review = reviewCandidates[0];
-    const topCategories = categoryTotals.slice(0, 3);
-    const monthlyWeight = Math.min(100, (monthlyTotal / 180000) * 100);
+    const decisionItems = upcoming.slice(0, 3);
+    const topCategories = categoryTotals.slice(0, 5);
+    const reviewingCount = costs.filter((cost) => cost.priority === "high").length;
+    const trialCount = costs.filter((cost) => decisionKind(cost).variant === "danger").length;
+    const renewalCount = upcoming.filter((item) => item.days <= 30 && decisionKind(item.cost).variant === "info").length;
+    const unsetCount = costs.filter((cost) => !cost.cancellationDate).length;
 
     return (
-      <div className="home-screen">
-        <section className="hero-card panel">
-          <div className="hero-card-top">
-            <div>
-              <p className="eyebrow">Monthly fixed cost</p>
-              <h2>今月の固定費</h2>
-            </div>
-            <span>{currentMonthOccurrences.length}件</span>
+      <div className="concept-screen home-concept">
+        <section className="monthly-card">
+          <p>月額の固定費</p>
+          <strong>{formatCurrency.format(monthlyTotal)}</strong>
+          <div className="monthly-card-foot">
+            <span>
+              年額
+              <b>{formatCurrency.format(annualTotal)}</b>
+            </span>
+            <span>
+              日あたり
+              <b>{formatCurrency.format(Math.round(annualTotal / 365))}</b>
+            </span>
           </div>
-          <strong className="hero-amount">{formatCurrency.format(thisMonthTotal)}</strong>
-          <div className="hero-metrics">
-            <div>
-              <span>月額換算</span>
-              <strong>{formatCurrency.format(monthlyTotal)}</strong>
-            </div>
-            <div>
-              <span>年間換算</span>
-              <strong>{formatCurrency.format(annualTotal)}</strong>
-            </div>
-          </div>
-          <div className="meter-track">
-            <span style={{ width: `${monthlyWeight}%` }} />
-          </div>
-          <small>
-            {monthlyTotal >= 150000
-              ? "固定費がかなり重め。まず大きい順に見直す価値があります。"
-              : monthlyTotal >= 80000
-                ? "見直し余地あり。次回支払前に候補を確認しましょう。"
-                : "固定費は軽め。新規契約だけ増やしすぎに注意。"}
-          </small>
         </section>
 
-        <section className="home-side">
-          <article className="glass-tile next-tile">
-            {next && <CostLogo name={next.cost.name} category={next.cost.category} size="lg" />}
-            <div>
-              <p className="eyebrow">Next</p>
-              <strong>{next ? next.cost.name : "支払予定なし"}</strong>
-              <span>{next ? `${next.days === 0 ? "今日" : `${next.days}日後`}・${formatShortDate.format(next.date)}` : "45日以内は空です"}</span>
-            </div>
-            <b>{next ? formatCurrency.format(next.cost.amount) : "-"}</b>
-          </article>
-
-          <article className="glass-tile review-tile">
-            {review && <CostLogo name={review.cost.name} category={review.cost.category} size="lg" />}
-            <div>
-              <p className="eyebrow">Review</p>
-              <strong>{review ? review.cost.name : "見直し候補なし"}</strong>
-              <span>{review ? `月換算 ${formatCurrency.format(review.monthly)}` : "優先度を高にすると表示されます"}</span>
-            </div>
-            <button className="icon-button" type="button" onClick={() => (review ? openEdit(review.cost) : setActiveView("list"))} aria-label="見直し候補を開く">
-              <Edit3 size={16} />
-            </button>
-          </article>
+        <section className="concept-section">
+          <h2>次に判断するもの</h2>
+          <div className="decision-list">
+            {decisionItems.map((item) => (
+              <button className="decision-row" type="button" key={item.cost.id} onClick={() => openEdit(item.cost)}>
+                <CostLogo name={item.cost.name} category={item.cost.category} size="md" />
+                <div>
+                  <strong>{displayCostName(item.cost.name)}</strong>
+                  <span>{decisionKind(item.cost).label}</span>
+                  <em className={`deadline deadline-${deadlineTone(item.days)}`}>
+                    {item.days === 0 ? "今日" : `あと${item.days}日`}
+                  </em>
+                </div>
+                <b>{formatCurrency.format(item.cost.amount)} /月</b>
+                <ChevronRight size={17} />
+              </button>
+            ))}
+          </div>
         </section>
 
-        <section className="home-breakdown panel">
-          <div className="section-heading compact-heading">
-            <div>
-              <p className="eyebrow">Breakdown</p>
-              <h2>支出の重い順</h2>
-            </div>
-          </div>
-          <div className="category-mini-list">
+        <section className="concept-section compact-home-section">
+          <h2>固定費の内訳</h2>
+          <div className="breakdown-bars">
             {topCategories.map((category) => (
-              <div className="category-mini-row" key={category.value}>
+              <div className="breakdown-row" key={category.value}>
                 <span className="category-swatch" style={{ background: category.color }} />
                 <strong>{category.label}</strong>
-                <div className="category-bar-wrap">
-                  <span className="category-bar" style={{ width: `${(category.total / maxCategoryTotal) * 100}%`, background: category.color }} />
-                </div>
+                <i>
+                  <span style={{ width: `${(category.total / maxCategoryTotal) * 100}%`, background: category.color }} />
+                </i>
                 <b>{formatCurrency.format(category.total)}</b>
+                <small>{Math.round((category.total / Math.max(1, monthlyTotal)) * 100)}%</small>
               </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="concept-section">
+          <h2>棚卸し状況</h2>
+          <div className="inventory-grid">
+            {[
+              { label: "見直し中", value: reviewingCount, icon: <Edit3 size={24} />, tone: "blue" },
+              { label: "無料期間中", value: trialCount, icon: <Sparkles size={24} />, tone: "green" },
+              { label: "更新前", value: renewalCount, icon: <CalendarDays size={24} />, tone: "orange" },
+              { label: "期限未設定", value: unsetCount, icon: <MoreHorizontal size={24} />, tone: "gray" },
+            ].map((item) => (
+              <button className={`inventory-tile inventory-${item.tone}`} type="button" key={item.label} onClick={() => setActiveView(item.label === "期限未設定" ? "list" : "calendar")}>
+                {item.icon}
+                <span>{item.label}</span>
+                <strong>{item.value}件</strong>
+              </button>
             ))}
           </div>
         </section>
@@ -1319,14 +1316,8 @@ export default function App() {
   };
 
   const renderList = () => (
-    <div className="list-screen">
-      <section className="panel wide-panel list-panel">
-        <div className="section-heading list-heading">
-          <div>
-            <p className="eyebrow">Fixed costs</p>
-            <h2>固定費一覧</h2>
-          </div>
-        </div>
+    <div className="concept-screen contracts-screen">
+      <section className="contract-tools">
         <div className="toolbar">
           <label className="search-box">
             <Search size={16} />
@@ -1368,50 +1359,28 @@ export default function App() {
             </select>
           </label>
         </div>
-
-        {filteredCosts.length > 0 ? (
-          <>
-            <div className="cost-list paged-cost-list">
-              {visibleCosts.map((cost) => (
-                <CompactCostCard
-                  cost={cost}
-                  key={cost.id}
-                  today={today}
-                  onEdit={() => openEdit(cost)}
-                />
-              ))}
-            </div>
-            <div className="pager">
-              <button
-                className="ghost-button"
-                type="button"
-                onClick={() => setListPage((current) => Math.max(0, current - 1))}
-                disabled={listPage === 0}
-              >
-                <ChevronLeft size={16} />
-                前へ
-              </button>
-              <span>
-                {listPage + 1} / {listPageCount}
-              </span>
-              <button
-                className="ghost-button"
-                type="button"
-                onClick={() => setListPage((current) => Math.min(listPageCount - 1, current + 1))}
-                disabled={listPage >= listPageCount - 1}
-              >
-                次へ
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </>
-        ) : (
-          <EmptyState
-            title="条件に合う固定費がありません"
-            description="フィルターを外すか、追加タブから新しい固定費を登録してください。"
-          />
-        )}
+        <div className="contract-tabs">
+          <button className="active" type="button" onClick={() => setCategoryFilter("all")}>すべて</button>
+          <button type="button" onClick={() => setSortKey("amount-desc")}>見直し中</button>
+          <button type="button" onClick={() => setSortKey("date")}>期限あり</button>
+          <button type="button" onClick={() => setPaymentFilter("all")}>期限なし</button>
+        </div>
       </section>
+
+      <div className="contract-list">
+        {filteredCosts.slice(0, 5).map((cost) => (
+          <button className="contract-card" type="button" key={cost.id} onClick={() => openEdit(cost)}>
+            <CostLogo name={cost.name} category={cost.category} size="lg" />
+            <div>
+              <strong>{displayCostName(cost.name)}</strong>
+              <span>{cost.category}</span>
+              <b>{formatCurrency.format(monthlyEquivalent(cost))}/月</b>
+            </div>
+            <em className={`status-pill status-${decisionKind(cost).variant}`}>{decisionKind(cost).label}</em>
+            <ChevronRight size={18} />
+          </button>
+        ))}
+      </div>
     </div>
   );
 
@@ -1715,176 +1684,122 @@ export default function App() {
   };
 
   const renderCalendar = () => {
-    const first = startOfMonth(calendarMonth);
-    const last = endOfMonth(calendarMonth);
-    const blankCount = first.getDay();
-    const days = [
-      ...Array.from({ length: blankCount }, (_, index) => null),
-      ...Array.from({ length: last.getDate() }, (_, index) => new Date(first.getFullYear(), first.getMonth(), index + 1)),
-    ];
+    const weekItems = upcoming.filter((item) => item.days <= 7);
+    const monthItems = upcoming.filter((item) => item.days > 7 && item.days <= 45);
+    const unsetItems = costs.filter((cost) => !cost.cancellationDate).slice(0, 2);
 
     return (
-      <div className="view-grid">
-        <section className="panel wide-panel">
-          <div className="calendar-header">
-            <div>
-              <p className="eyebrow">Calendar</p>
-              <h2>{calendarMonth.getFullYear()}年 {calendarMonth.getMonth() + 1}月</h2>
-              <span>{formatCurrency.format(calendarTotal)} / {calendarOccurrences.length}件</span>
-            </div>
-            <div className="calendar-controls">
-              <button className="icon-button" onClick={() => setCalendarMonth(addMonths(calendarMonth, -1))} aria-label="前月">
-                <ChevronLeft size={18} />
-              </button>
-              <button className="ghost-button" onClick={() => setCalendarMonth(startOfMonth(new Date()))} type="button">
-                今月
-              </button>
-              <button className="icon-button" onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))} aria-label="翌月">
-                <ChevronRight size={18} />
-              </button>
-            </div>
+      <div className="concept-screen action-screen">
+        <section className="action-summary">
+          <div>
+            <CalendarDays size={28} />
+            <span>今週</span>
+            <strong>{weekItems.length}件</strong>
           </div>
-          <div className="calendar-grid week-row">
-            {["日", "月", "火", "水", "木", "金", "土"].map((day) => (
-              <span key={day}>{day}</span>
-            ))}
+          <div>
+            <CalendarDays size={28} />
+            <span>今月</span>
+            <strong>{monthItems.length + weekItems.length}件</strong>
           </div>
-          <div className="calendar-grid">
-            {days.map((day, index) => {
-              const dayOccurrences = day ? calendarOccurrences.filter((item) => isSameDay(item.date, day)) : [];
-              return (
-                <div className={`calendar-cell ${day && isSameDay(day, today) ? "today" : ""}`} key={day ? toISODate(day) : `blank-${index}`}>
-                  {day && <strong>{day.getDate()}</strong>}
-                  <div className="calendar-events">
-                    {dayOccurrences.slice(0, 3).map(({ cost }) => (
-                      <button type="button" key={cost.id} onClick={() => openEdit(cost)} title={`${cost.name}を編集`}>
-                        {cost.name}
-                        <span>{formatCurrency.format(cost.amount)}</span>
-                      </button>
-                    ))}
-                    {dayOccurrences.length > 3 && <small>+{dayOccurrences.length - 3}件</small>}
-                  </div>
+        </section>
+
+        <ActionGroup title="今週" items={weekItems} onEdit={openEdit} />
+        <ActionGroup title="今月" items={monthItems.slice(0, 3)} onEdit={openEdit} />
+
+        <section className="concept-section action-group">
+          <h2>未設定</h2>
+          <div className="action-list">
+            {unsetItems.map((cost) => (
+              <button className="action-row" type="button" key={cost.id} onClick={() => openEdit(cost)}>
+                <em className="deadline deadline-muted">期限なし</em>
+                <CostLogo name={cost.name} category={cost.category} size="md" />
+                <div>
+                  <strong>{displayCostName(cost.name)}</strong>
+                  <span>期限未設定</span>
                 </div>
-              );
-            })}
-          </div>
-          <div className="mobile-calendar-list">
-            {calendarOccurrences.length > 0 ? (
-              calendarOccurrences
-                .slice()
-                .sort((a, b) => a.date.getTime() - b.date.getTime())
-                .map(({ cost, date }) => (
-                  <article className="upcoming-item" key={`${cost.id}-${date.toISOString()}`}>
-                    <div>
-                      <strong>{formatShortDate.format(date)}</strong>
-                      <small>{cost.name}</small>
-                    </div>
-                    <span>{formatCurrency.format(cost.amount)}</span>
-                  </article>
-                ))
-            ) : (
-              <EmptyState title="この月の支払予定はありません" description="翌月以降も確認できます。" />
-            )}
+                <b>{formatCurrency.format(monthlyEquivalent(cost))}</b>
+                <ChevronRight size={17} />
+              </button>
+            ))}
           </div>
         </section>
       </div>
     );
   };
 
-  const renderSettings = () => (
-    <div className="view-grid">
-      <section className="panel">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Data</p>
-            <h2>データ管理</h2>
-          </div>
-          <Database size={22} />
-        </div>
-        <div className="settings-actions">
-          <button className="primary-button" onClick={exportJson} type="button">
-            <Download size={16} />
-            JSONエクスポート
-          </button>
-          <label className="upload-button">
-            <FileUp size={16} />
-            JSONインポート
-            <input type="file" accept="application/json,.json" onChange={importJson} />
-          </label>
-          <button className="ghost-button" onClick={resetSampleData} type="button">
-            <RotateCcw size={16} />
-            サンプルデータ投入
-          </button>
-          <button className="danger-button" onClick={deleteAllData} type="button">
-            <Trash2 size={16} />
-            全データ削除
-          </button>
-        </div>
-      </section>
+  const renderSettings = () => {
+    const ranked = costs
+      .slice()
+      .sort((a, b) => monthlyEquivalent(b) - monthlyEquivalent(a))
+      .slice(0, 3);
 
-      <section className="panel">
-        <div className="section-heading">
+    return (
+      <div className="concept-screen detail-screen">
+        <section className="total-strip">
           <div>
-            <p className="eyebrow">PWA</p>
-            <h2>スマホ利用</h2>
-          </div>
-          <ShieldCheck size={22} />
-        </div>
-        <div className="pwa-note">
-          <CheckCircle2 size={20} />
-          <p>ホーム画面追加、オフライン起動、localStorage保存に対応しています。</p>
-        </div>
-        <div className="mini-stats">
-          <div>
-            <span>登録件数</span>
-            <strong>{costs.length}件</strong>
+            <span>月額</span>
+            <strong>{formatCurrency.format(monthlyTotal)}</strong>
           </div>
           <div>
-            <span>支払方法</span>
-            <strong>{paymentMethods.length}種類</strong>
+            <span>年額</span>
+            <strong>{formatCurrency.format(annualTotal)}</strong>
           </div>
           <div>
-            <span>高優先度</span>
-            <strong>{costs.filter((cost) => cost.priority === "high").length}件</strong>
+            <span>日あたり</span>
+            <strong>{formatCurrency.format(Math.round(annualTotal / 365))}</strong>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="panel wide-panel">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Preset catalog</p>
-            <h2>テンプレート収録サービス</h2>
+        <section className="concept-section donut-section">
+          <h2>カテゴリ別内訳</h2>
+          <div className="donut-layout">
+            <div
+              className="donut-chart"
+              style={{
+                background: `conic-gradient(${categoryTotals
+                  .map((category, index) => {
+                    const start = categoryTotals.slice(0, index).reduce((sum, item) => sum + item.total, 0);
+                    const end = start + category.total;
+                    return `${category.color} ${(start / Math.max(1, monthlyTotal)) * 100}% ${(end / Math.max(1, monthlyTotal)) * 100}%`;
+                  })
+                  .join(", ")})`,
+              }}
+            />
+            <div className="donut-legend">
+              {categoryTotals.slice(0, 6).map((category) => (
+                <div key={category.value}>
+                  <span className="category-swatch" style={{ background: category.color }} />
+                  <strong>{category.label}</strong>
+                  <b>{formatCurrency.format(category.total)}</b>
+                  <small>{Math.round((category.total / Math.max(1, monthlyTotal)) * 100)}%</small>
+                </div>
+              ))}
+            </div>
           </div>
-          <span className="muted">{costPresets.length}プラン</span>
-        </div>
-        <div className="provider-tile-grid settings-provider-grid">
-          {presetGroups.map(([provider, presets]) => {
-            const summary = presetSummary(presets);
-            return (
-              <button
-                className="provider-tile"
-                key={provider}
-                type="button"
-                onClick={() => {
-                  setEditingId(null);
-                  selectPresetProvider(provider);
-                  setActiveView("editor");
-                }}
-              >
-                <CostLogo provider={provider} size="sm" />
-                <strong>{providerLabel(provider)}</strong>
-                <small>
-                  {presets.length}プラン・{formatCurrency.format(summary.minimum)}から
-                </small>
+        </section>
+
+        <section className="concept-section ranking-section">
+          <h2>月額換算の高い順</h2>
+          <div className="ranking-list">
+            {ranked.map((cost, index) => (
+              <button className="ranking-row" type="button" key={cost.id} onClick={() => openEdit(cost)}>
+                <span>{index + 1}</span>
+                <div>
+                  <strong>{displayCostName(cost.name)}</strong>
+                  <small>{cost.category}</small>
+                </div>
+                <b>{formatCurrency.format(monthlyEquivalent(cost))}/月</b>
               </button>
-            );
-          })}
-        </div>
-      </section>
-    </div>
-  );
-
+            ))}
+          </div>
+          <button className="see-all-button" type="button" onClick={() => setActiveView("list")}>
+            すべて見る
+            <ChevronRight size={17} />
+          </button>
+        </section>
+      </div>
+    );
+  };
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -1917,9 +1832,9 @@ export default function App() {
       <main>
         <header className="topbar">
           <div>
-            <p className="eyebrow">Local first PWA</p>
             <h1>{pageTitle(activeView)}</h1>
           </div>
+          {activeView === "dashboard" && <button className="month-chip" type="button">2026年5月⌄</button>}
         </header>
 
         {activeView === "dashboard" && renderDashboard()}
@@ -1939,11 +1854,45 @@ export default function App() {
             aria-label={tab.label}
           >
             {tab.icon}
-            <span>{tab.label.replace("ダッシュボード", "ホーム").replace("固定費一覧", "一覧").replace("追加・編集", "追加").replace("カレンダー", "予定")}</span>
+            <span>{tab.label}</span>
           </button>
         ))}
       </nav>
     </div>
+  );
+}
+
+function ActionGroup({
+  title,
+  items,
+  onEdit,
+}: {
+  title: string;
+  items: Array<{ cost: FixedCost; date: Date; days: number }>;
+  onEdit: (cost: FixedCost) => void;
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <section className="concept-section action-group">
+      <h2>{title}</h2>
+      <div className="action-list">
+        {items.map((item) => (
+          <button className="action-row" type="button" key={`${item.cost.id}-${item.days}`} onClick={() => onEdit(item.cost)}>
+            <em className={`deadline deadline-${deadlineTone(item.days)}`}>
+              {item.days === 0 ? "今日" : `あと${item.days}日`}
+            </em>
+            <CostLogo name={item.cost.name} category={item.cost.category} size="md" />
+            <div>
+              <strong>{displayCostName(item.cost.name)}</strong>
+              <span>{decisionKind(item.cost).label}</span>
+            </div>
+            <b>{formatCurrency.format(item.cost.amount)}</b>
+            <ChevronRight size={17} />
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -2169,18 +2118,52 @@ function priorityLabel(priority: Priority) {
   return "低";
 }
 
+function decisionKind(cost: FixedCost) {
+  const text = `${cost.name} ${cost.memo}`.toLowerCase();
+  if (text.includes("無料") || text.includes("trial")) {
+    return { label: "無料体験終了", variant: "danger" as const };
+  }
+  if (text.includes("割引")) {
+    return { label: "割引終了", variant: "warn" as const };
+  }
+  if (cost.priority === "high") {
+    return { label: "見直し中", variant: "info" as const };
+  }
+  if (cost.cancellationDate) {
+    return { label: "解約予定", variant: "warn" as const };
+  }
+  return { label: "自動更新", variant: "success" as const };
+}
+
+function deadlineTone(days: number) {
+  if (days <= 7) return "danger";
+  if (days <= 14) return "warn";
+  return "info";
+}
+
+function displayCostName(name: string) {
+  if (name.includes("Netflix")) return "Netflix";
+  if (name.includes("Amazon Prime")) return "Amazon Prime";
+  if (name.includes("Apple Music")) return "Apple Music";
+  if (name.includes("スマホ")) return "スマホ回線";
+  if (name.includes("インターネット")) return "自宅ネット";
+  if (name.includes("アメックス")) return "アメックス";
+  if (name.length > 12) return `${name.slice(0, 12)}...`;
+  return name;
+}
+
 function pageTitle(view: View) {
   switch (view) {
     case "dashboard":
-      return "固定費ダッシュボード";
+      return "固定費";
     case "list":
-      return "固定費一覧";
+      return "契約";
     case "editor":
       return "追加・編集";
     case "calendar":
-      return "支払カレンダー";
+      return "要対応";
     case "settings":
-      return "設定 / データ管理";
+      return "内訳";
   }
 }
 
