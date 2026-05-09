@@ -476,7 +476,6 @@ main {
 .category-row > div:first-child,
 .cost-title-row,
 .review-card-top,
-.preset-strip label,
 .toolbar label,
 .pwa-note {
   display: flex;
@@ -596,8 +595,7 @@ main {
   margin-bottom: 16px;
 }
 
-.toolbar label,
-.preset-strip label {
+.toolbar label {
   min-height: 42px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -607,8 +605,7 @@ main {
 }
 
 .toolbar input,
-.toolbar select,
-.preset-strip select {
+.toolbar select {
   width: 100%;
   min-width: 0;
   border: 0;
@@ -704,20 +701,6 @@ main {
 .cost-actions {
   justify-content: flex-end;
   flex-wrap: wrap;
-}
-
-.preset-strip {
-  display: grid;
-  grid-template-columns: minmax(240px, 420px) minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.preset-strip span {
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
 }
 
 .editor-form {
@@ -905,6 +888,150 @@ main {
   margin-top: 14px;
 }
 
+.preset-picker {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.preset-picker-head,
+.plan-drawer-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.preset-picker-head h3 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.preset-picker-head span,
+.plan-drawer-head span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.provider-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.provider-tile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "mark name"
+    "mark meta";
+  align-items: center;
+  gap: 3px 9px;
+  min-height: 74px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+}
+
+.provider-tile.active,
+.plan-tile.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.provider-mark {
+  display: grid;
+  grid-area: mark;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.provider-tile strong {
+  grid-area: name;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+}
+
+.provider-tile small {
+  grid-area: meta;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.plan-drawer {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.plan-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.plan-tile {
+  display: grid;
+  gap: 4px;
+  min-height: 76px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+}
+
+.plan-tile span,
+.plan-tile small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-tile strong {
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+.preset-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .preset-card {
   display: grid;
   gap: 5px;
@@ -939,8 +1066,13 @@ main {
   }
 
   .review-grid,
-  .preset-grid {
+  .preset-grid,
+  .provider-tile-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plan-tile-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -984,12 +1116,25 @@ main {
 
   .toolbar,
   .editor-form,
-  .preset-strip,
   .form-summary,
   .mini-stats,
   .review-grid,
   .preset-grid {
     grid-template-columns: 1fr;
+  }
+
+  .provider-tile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plan-tile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .preset-picker-head,
+  .plan-drawer-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .cost-card-main,

@@ -827,6 +827,7 @@ export default function App() {
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()));
+  const [selectedPresetProvider, setSelectedPresetProvider] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(costs));
@@ -842,6 +843,8 @@ export default function App() {
   const paymentMethods = useMemo(() => {
     return Array.from(new Set(costs.map((cost) => cost.paymentMethod).filter(Boolean))).sort();
   }, [costs]);
+
+  const presetGroups = useMemo(() => Object.entries(groupPresets()), []);
 
   const currentMonthOccurrences = useMemo(() => {
     return costs.flatMap((cost) =>
@@ -948,6 +951,7 @@ export default function App() {
   function openCreate() {
     setEditingId(null);
     setDraft(emptyDraft());
+    setSelectedPresetProvider(null);
     setActiveView("editor");
   }
 
@@ -975,6 +979,7 @@ export default function App() {
   function applyPreset(presetId: string) {
     const preset = costPresets.find((item) => item.id === presetId);
     if (!preset) return;
+    setSelectedPresetProvider(preset.provider);
 
     setDraft((current) => ({
       ...current,
@@ -1359,25 +1364,64 @@ export default function App() {
         )}
       </div>
 
-      <div className="preset-strip">
-        <label>
-          <Sparkles size={16} />
-          <select defaultValue="" onChange={(event) => applyPreset(event.target.value)}>
-            <option value="" disabled>
-              サブスク/カードのテンプレートを選択
-            </option>
-            {Object.entries(groupPresets()).map(([provider, presets]) => (
-              <optgroup label={provider} key={provider}>
-                {presets.map((preset) => (
-                  <option value={preset.id} key={preset.id}>
-                    {preset.plan} - {formatCurrency.format(preset.amount)} / {cycleCompact(preset.cycle)}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </label>
-        <span>金額はあとから自由に編集できます。</span>
+      <div className="preset-picker">
+        <div className="preset-picker-head">
+          <div>
+            <p className="eyebrow">Templates</p>
+            <h3>よく使う固定費から選ぶ</h3>
+          </div>
+          <span>金額はあとから編集できます</span>
+        </div>
+        {selectedPresetProvider ? (
+          <div className="plan-drawer">
+            <div className="plan-drawer-head">
+              <strong>{selectedPresetProvider}</strong>
+              <span>{presetGroups.find(([provider]) => provider === selectedPresetProvider)?.[1].length ?? 0}プラン</span>
+            </div>
+            <div className="plan-tile-grid">
+              {(presetGroups.find(([provider]) => provider === selectedPresetProvider)?.[1] ?? []).map((preset) => {
+                const isApplied = draft.name === preset.name && draft.amount === preset.amount && draft.cycle === preset.cycle;
+                return (
+                  <button
+                    className={`plan-tile ${isApplied ? "active" : ""}`}
+                    type="button"
+                    key={preset.id}
+                    onClick={() => applyPreset(preset.id)}
+                  >
+                    <span>{preset.plan}</span>
+                    <strong>{formatCurrency.format(preset.amount)}</strong>
+                    <small>{cycleCompact(preset.cycle)}</small>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="preset-hint">
+            <Sparkles size={16} />
+            サービスのタイルを選ぶと、プラン候補がここに開きます。
+          </div>
+        )}
+        <div className="provider-tile-grid">
+          {presetGroups.map(([provider, presets]) => {
+            const summary = presetSummary(presets);
+            const isActive = selectedPresetProvider === provider;
+            return (
+              <button
+                className={`provider-tile ${isActive ? "active" : ""}`}
+                type="button"
+                key={provider}
+                onClick={() => setSelectedPresetProvider(isActive ? null : provider)}
+              >
+                <span className="provider-mark">{providerInitial(provider)}</span>
+                <strong>{provider}</strong>
+                <small>
+                  {presets.length}プラン・{formatCurrency.format(summary.minimum)}から
+                </small>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <form className="editor-form" onSubmit={saveCost}>
@@ -1644,34 +1688,29 @@ export default function App() {
           </div>
           <span className="muted">{costPresets.length}プラン</span>
         </div>
-        <div className="preset-grid">
-          {costPresets.map((preset) => (
-            <button
-              className="preset-card"
-              key={preset.id}
-              type="button"
-              onClick={() => {
-                setActiveView("editor");
-                setEditingId(null);
-                setDraft({
-                  ...emptyDraft(),
-                  name: preset.name,
-                  amount: preset.amount,
-                  cycle: preset.cycle,
-                  category: preset.category,
-                  paymentMethod: preset.paymentMethod,
-                  priority: preset.priority,
-                  memo: preset.memo,
-                });
-              }}
-            >
-              <span>{preset.provider}</span>
-              <strong>{preset.plan}</strong>
-              <small>
-                {formatCurrency.format(preset.amount)} / {cycleCompact(preset.cycle)}
-              </small>
-            </button>
-          ))}
+        <div className="provider-tile-grid settings-provider-grid">
+          {presetGroups.map(([provider, presets]) => {
+            const summary = presetSummary(presets);
+            return (
+              <button
+                className="provider-tile"
+                key={provider}
+                type="button"
+                onClick={() => {
+                  setSelectedPresetProvider(provider);
+                  setEditingId(null);
+                  setDraft(emptyDraft());
+                  setActiveView("editor");
+                }}
+              >
+                <span className="provider-mark">{providerInitial(provider)}</span>
+                <strong>{provider}</strong>
+                <small>
+                  {presets.length}プラン・{formatCurrency.format(summary.minimum)}から
+                </small>
+              </button>
+            );
+          })}
         </div>
       </section>
     </div>
@@ -1851,4 +1890,19 @@ function groupPresets() {
     groups[preset.provider].push(preset);
     return groups;
   }, {});
+}
+
+function presetSummary(presets: CostPreset[]) {
+  return {
+    minimum: Math.min(...presets.map((preset) => preset.amount)),
+  };
+}
+
+function providerInitial(provider: string) {
+  if (provider === "American Express") return "AX";
+  if (provider === "Apple Music") return "AM";
+  if (provider === "Amazon") return "AZ";
+  if (provider === "YouTube") return "YT";
+  if (provider === "Disney+") return "D+";
+  return provider.slice(0, 2).toUpperCase();
 }
