@@ -4030,3 +4030,76 @@ main::-webkit-scrollbar {
     padding: 0;
   }
 }
+
+/* Keep the contract header stable while the list scrolls. */
+.settings-action {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.settings-action svg,
+.settings-action:hover svg {
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .settings-action {
+  border-color: var(--line-strong);
+  background: color-mix(in srgb, var(--surface-strong) 88%, transparent);
+  color: var(--text);
+}
+
+main.view-list {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+main.view-list .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  flex: 0 0 auto;
+  background: var(--app-bg);
+}
+
+.view-list .contracts-screen {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.view-list .contract-tools {
+  flex: 0 0 auto;
+  background: var(--app-bg);
+  padding-bottom: 8px;
+}
+
+.view-list .contract-list {
+  align-content: start;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 0 16px;
+  scrollbar-width: none;
+}
+
+.view-list .contract-list::-webkit-scrollbar {
+  display: none;
+}
+
+.view-list .contract-card {
+  align-self: start;
+  width: 100%;
+}
+
+@media (max-width: 880px) {
+  main.view-list {
+    height: 100dvh;
+    min-height: 0;
+    padding-bottom: 92px;
+  }
+}

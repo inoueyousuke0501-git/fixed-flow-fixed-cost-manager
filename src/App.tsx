@@ -1383,7 +1383,7 @@ export default function App() {
       </section>
 
       <div className="contract-list">
-        {filteredCosts.slice(0, 5).map((cost) => (
+        {filteredCosts.map((cost) => (
           <button className="contract-card" type="button" key={cost.id} onClick={() => openEdit(cost)}>
             <CostLogo name={cost.name} category={cost.category} size="lg" />
             <div>
@@ -1920,7 +1920,7 @@ export default function App() {
         </button>
       </aside>
 
-      <main>
+      <main className={`view-${activeView}`}>
         <header className="topbar">
           {(activeView === "editor" || activeView === "appSettings" || activeView === "notifications") && (
             <button className="plain-nav-button" type="button" onClick={() => setActiveView(activeView === "editor" ? "list" : "dashboard")}>
@@ -1931,7 +1931,7 @@ export default function App() {
             <h1>{pageTitle(activeView)}</h1>
           </div>
           {activeView === "dashboard" && (
-            <button className="icon-button concept-add-button" type="button" onClick={() => setActiveView("appSettings")} aria-label="設定">
+            <button className="icon-button concept-add-button settings-action" type="button" onClick={() => setActiveView("appSettings")} aria-label="設定">
               <Settings size={20} />
             </button>
           )}
