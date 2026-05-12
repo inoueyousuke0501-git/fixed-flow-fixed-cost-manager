@@ -3487,6 +3487,24 @@ main::-webkit-scrollbar {
   color: var(--icon-fg);
 }
 
+.cost-logo {
+  align-content: center;
+  justify-content: center;
+  justify-items: center;
+}
+
+.cost-logo > svg,
+.cost-logo > span {
+  grid-area: 1 / 1;
+  place-self: center;
+}
+
+.cost-logo > svg {
+  display: block;
+  flex: none;
+  margin: auto;
+}
+
 .editor-panel {
   background: transparent;
   color: var(--text);
