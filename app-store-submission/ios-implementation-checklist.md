@@ -10,6 +10,34 @@
 - 課金: StoreKit 2
 - データ保存: 初期はWebView内localStorage。本番では移行余地を残す
 
+## テストアプリ化の次アクション
+
+2026-05-12時点のローカル確認では、`xcodebuild` がCommand Line Toolsを向いており、Xcode本体が未選択のためiOSビルドはまだ実行できません。
+
+最初に行うこと:
+
+- Mac App StoreまたはApple Developerから最新のXcodeを入れる
+- `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer` でXcode本体を選択する
+- Xcodeを一度起動して追加コンポーネントとライセンスを完了する
+- CapacitorでiOSプロジェクトを追加し、実機またはSimulatorで起動確認する
+
+確認したい観点:
+
+- Liquid Glass: 最新SDKでビルドし、標準ナビゲーション/タブ/シートの見え方を確認する
+- 通知: `UNUserNotificationCenter` またはCapacitor Local Notificationsで許可ダイアログ、3日前通知、通知プレビューを確認する
+- PWAとの差分: ステータスバー、ホームインジケータ、キーボード、ファイルインポート/エクスポートの扱いを確認する
+
+参考:
+
+- Apple Developer: Adopting Liquid Glass
+  https://developer.apple.com/documentation/TechnologyOverviews/adopting-liquid-glass
+- Apple Developer: Applying Liquid Glass to custom views
+  https://developer.apple.com/documentation/SwiftUI/Applying-Liquid-Glass-to-custom-views
+- Apple Developer: UNUserNotificationCenter
+  https://developer.apple.com/documentation/usernotifications/unusernotificationcenter
+- Apple Developer: Scheduling a notification locally from your app
+  https://developer.apple.com/documentation/usernotifications/scheduling-a-notification-locally-from-your-app
+
 ## 必須実装
 
 - Bundle IDを作成する

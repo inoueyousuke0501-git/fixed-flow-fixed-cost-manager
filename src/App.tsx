@@ -60,7 +60,7 @@ type Priority = "low" | "medium" | "high";
 type ThemeMode = "light" | "dark";
 type View = "dashboard" | "list" | "editor" | "settings" | "appSettings" | "notifications";
 type SortKey = "date" | "amount-desc" | "created-desc" | "name";
-type EditorStep = "service" | "plan" | "form" | "details";
+type EditorStep = "service" | "form" | "details";
 type ContractFilter = "all" | "reviewing" | "confirmed";
 type DeadlineKind = "renewal" | "trialEnd" | "cancelBy" | "discountEnd" | "other";
 type ReminderDays = 0 | 1 | 3 | 7 | 30;
@@ -909,7 +909,6 @@ export default function App() {
   const [presetPage, setPresetPage] = useState(0);
   const [editorStep, setEditorStep] = useState<EditorStep>("service");
   const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()));
-  const [selectedPresetProvider, setSelectedPresetProvider] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(costs));
@@ -932,14 +931,13 @@ export default function App() {
 
   const presetGroups = useMemo(() => Object.entries(groupPresets()), []);
   const serviceTiles = useMemo<ServiceTile[]>(() => {
-    const providerTiles = presetGroups.map(([provider, presets]) => {
-      const summary = presetSummary(presets);
+    const providerTiles = presetGroups.map(([provider]) => {
       return {
         id: `provider-${provider}`,
         kind: "provider" as const,
         provider,
         label: providerLabel(provider),
-        summary: `${presets.length}プラン・${formatCurrency.format(summary.minimum)}から`,
+        summary: "金額を入力",
       };
     });
     const fixedCostTiles = categoryShortcuts.map((shortcut) => ({
@@ -1061,7 +1059,6 @@ export default function App() {
     if (view === "editor" && activeView !== "editor") {
       setEditingId(null);
       setDraft(emptyDraft());
-      setSelectedPresetProvider(null);
       setPresetPage(0);
       setEditorStep("service");
     }
@@ -1071,7 +1068,6 @@ export default function App() {
   function openCreate() {
     setEditingId(null);
     setDraft(emptyDraft());
-    setSelectedPresetProvider(null);
     setPresetPage(0);
     setEditorStep("service");
     setActiveView("editor");
@@ -1104,24 +1100,22 @@ export default function App() {
   function selectPresetProvider(provider: string) {
     const firstPreset = presetGroups.find(([itemProvider]) => itemProvider === provider)?.[1][0];
     if (!firstPreset) return;
-    setSelectedPresetProvider(provider);
     setDraft((current) => ({
       ...current,
-      name: firstPreset.name,
-      amount: firstPreset.amount,
-      cycle: firstPreset.cycle,
+      name: providerLabel(provider),
+      amount: 0,
+      cycle: "monthly",
       category: firstPreset.category,
-      paymentMethod: firstPreset.paymentMethod,
-      memo: firstPreset.memo,
+      paymentMethod: "",
+      memo: "",
       priority: firstPreset.priority,
     }));
-    setEditorStep("plan");
+    setEditorStep("form");
   }
 
   function selectCategoryShortcut(category: Category) {
     const shortcut = categoryShortcuts.find((item) => item.category === category);
     if (!shortcut) return;
-    setSelectedPresetProvider(null);
     setDraft((current) => ({
       ...current,
       name: shortcut.name,
@@ -1133,24 +1127,6 @@ export default function App() {
       priority: shortcut.priority,
     }));
     setEditorStep("form");
-  }
-
-  function applyPreset(presetId: string) {
-    const preset = costPresets.find((item) => item.id === presetId);
-    if (!preset) return;
-    setSelectedPresetProvider(preset.provider);
-    setEditorStep("form");
-
-    setDraft((current) => ({
-      ...current,
-      name: preset.name,
-      amount: preset.amount,
-      cycle: preset.cycle,
-      category: preset.category,
-      paymentMethod: preset.paymentMethod,
-      memo: preset.memo,
-      priority: preset.priority,
-    }));
   }
 
   function saveCost(event: FormEvent<HTMLFormElement>) {
@@ -1187,7 +1163,6 @@ export default function App() {
 
     setDraft(emptyDraft());
     setEditingId(null);
-    setSelectedPresetProvider(null);
     setEditorStep("service");
     setActiveView("list");
   }
@@ -1428,10 +1403,6 @@ export default function App() {
   );
 
   const renderEditor = () => {
-    const selectedPresets = selectedPresetProvider
-      ? presetGroups.find(([provider]) => provider === selectedPresetProvider)?.[1] ?? []
-      : [];
-
     const backFromForm = () => {
       if (editorStep === "details") {
         setEditorStep("form");
@@ -1441,7 +1412,7 @@ export default function App() {
         setActiveView("list");
         return;
       }
-      setEditorStep(selectedPresetProvider ? "plan" : "service");
+      setEditorStep("service");
     };
 
     return (
@@ -1466,7 +1437,7 @@ export default function App() {
                 <p className="eyebrow">Choose</p>
                 <h3>ピクトグラムから選ぶ</h3>
               </div>
-              <span>プランは次の画面で選択</span>
+              <span>選んだあと金額を入力</span>
             </div>
             <div className="service-tile-grid">
               {visibleServiceTiles.map((tile) =>
@@ -1513,80 +1484,6 @@ export default function App() {
               >
                 <ChevronRight size={15} />
               </button>
-            </div>
-          </div>
-        )}
-
-        {editorStep === "plan" && selectedPresetProvider && (
-          <div className="preset-picker plan-picker">
-            <div className="plan-drawer-head">
-              <div className="selected-service-head">
-                <CostLogo provider={selectedPresetProvider} size="lg" />
-                <div>
-                  <p className="eyebrow">Plan</p>
-                  <h3>{providerLabel(selectedPresetProvider)}</h3>
-                  <span>料金プランを選ぶか、金額を手入力できます</span>
-                </div>
-              </div>
-              <button
-                className="ghost-button"
-                type="button"
-                onClick={() => {
-                  setSelectedPresetProvider(null);
-                  setEditorStep("service");
-                }}
-              >
-                選び直す
-              </button>
-            </div>
-            <div className="plan-tile-grid">
-              {selectedPresets.map((preset) => {
-                const isApplied = draft.name === preset.name && draft.amount === preset.amount && draft.cycle === preset.cycle;
-                return (
-                  <button
-                    className={`plan-tile ${isApplied ? "active" : ""}`}
-                    type="button"
-                    key={preset.id}
-                    onClick={() => applyPreset(preset.id)}
-                  >
-                    <span>{preset.plan}</span>
-                    <strong>{formatCurrency.format(preset.amount)}</strong>
-                    <small>{cycleCompact(preset.cycle)}</small>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="custom-plan-box">
-              <div>
-                <strong>金額を手入力</strong>
-                <span>キャンペーン価格、家族割、年払いなどはここで調整できます。</span>
-              </div>
-              <div className="custom-plan-controls">
-                <label className="field">
-                  <span>金額</span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    min="0"
-                    value={draft.amount}
-                    onChange={(event) => updateDraft("amount", safeNumber(event.target.value))}
-                  />
-                </label>
-                <label className="field">
-                  <span>周期</span>
-                  <select value={draft.cycle} onChange={(event) => updateDraft("cycle", event.target.value as BillingCycle)}>
-                    {cycleOptions.map((option) => (
-                      <option value={option.value} key={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button className="primary-button" type="button" onClick={() => setEditorStep("form")}>
-                  入力へ
-                </button>
-              </div>
             </div>
           </div>
         )}
@@ -1933,10 +1830,6 @@ export default function App() {
           <span>ダークモード</span>
           <b>{theme === "dark" ? "オン" : "オフ"}</b>
         </button>
-        <div className="settings-row static">
-          <span>システム設定に合わせる</span>
-          <b>次期対応</b>
-        </div>
       </section>
 
       <section className="settings-group">
@@ -2412,12 +2305,6 @@ function groupPresets() {
     groups[preset.provider].push(preset);
     return groups;
   }, {});
-}
-
-function presetSummary(presets: CostPreset[]) {
-  return {
-    minimum: Math.min(...presets.map((preset) => preset.amount)),
-  };
 }
 
 function providerLabel(provider: string) {
