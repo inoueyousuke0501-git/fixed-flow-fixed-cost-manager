@@ -61,11 +61,9 @@ Node version: 22
 
 ## 公開URL
 
-NetlifyのデプロイURLは、デプロイ後にこの欄へ追記してください。
+Netlify URL:
 
-```text
-Netlify URL: デプロイ後に確認
-```
+https://fixed-flow-cost-manager-inoue.netlify.app/
 
 既存のGitHub Pages URL:
 
