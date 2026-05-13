@@ -4465,3 +4465,379 @@ main.view-editor {
     grid-template-columns: minmax(0, 1fr) 118px;
   }
 }
+
+/* iPhone pass: bottom sheets, scrollable pages, and liquid glass controls. */
+body {
+  background: var(--app-bg);
+}
+
+.concept-screen {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: calc(86px + env(safe-area-inset-bottom));
+  scrollbar-width: none;
+}
+
+.concept-screen::-webkit-scrollbar,
+.contract-list::-webkit-scrollbar,
+.settings-screen::-webkit-scrollbar,
+.notification-screen::-webkit-scrollbar {
+  display: none;
+}
+
+.home-concept,
+.detail-screen {
+  align-content: start;
+}
+
+.contract-list {
+  min-height: auto;
+  overflow: visible;
+}
+
+.has-editor-sheet {
+  pointer-events: none;
+}
+
+.editor-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  align-items: end;
+  background: color-mix(in srgb, var(--app-bg) 20%, transparent);
+  backdrop-filter: blur(7px) saturate(1.15);
+  -webkit-backdrop-filter: blur(7px) saturate(1.15);
+}
+
+.editor-sheet {
+  position: relative;
+  width: min(100%, 430px);
+  max-height: min(88dvh, 740px);
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-bottom: 0;
+  border-radius: 30px 30px 0 0;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 86%, transparent), color-mix(in srgb, var(--app-bg) 96%, transparent)),
+    var(--app-bg);
+  box-shadow: 0 -22px 70px rgba(0, 0, 0, 0.26);
+  padding: 10px 16px calc(14px + env(safe-area-inset-bottom));
+  pointer-events: auto;
+  touch-action: pan-y;
+  backdrop-filter: blur(34px) saturate(1.9);
+  -webkit-backdrop-filter: blur(34px) saturate(1.9);
+}
+
+.editor-sheet-service {
+  max-height: min(58dvh, 470px);
+}
+
+.sheet-grabber {
+  display: block;
+  width: 42px;
+  height: 5px;
+  margin: 2px auto 8px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 42%, transparent);
+  padding: 0;
+}
+
+.sheet-topbar {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) 88px;
+  align-items: center;
+  min-height: 38px;
+  margin-bottom: 8px;
+}
+
+.sheet-topbar strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 850;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet-topbar .plain-nav-button:first-child {
+  justify-self: start;
+}
+
+.sheet-topbar .plain-nav-button:last-child {
+  justify-self: end;
+}
+
+.editor-sheet .editor-panel {
+  height: auto;
+  max-height: calc(88dvh - 78px - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  padding: 0;
+  scrollbar-width: none;
+}
+
+.editor-sheet .editor-panel::-webkit-scrollbar {
+  display: none;
+}
+
+.editor-sheet .section-heading {
+  margin-bottom: 10px;
+}
+
+.editor-sheet .section-heading h2,
+.editor-sheet .section-heading .eyebrow {
+  display: none;
+}
+
+.editor-sheet .section-heading .danger-ghost-button {
+  min-height: 34px;
+  margin-left: auto;
+}
+
+.editor-sheet .preset-picker,
+.editor-sheet .editor-form {
+  height: auto;
+  padding: 0;
+}
+
+.editor-sheet .preset-picker {
+  display: grid;
+  gap: 12px;
+}
+
+.editor-sheet .preset-picker-head {
+  display: block;
+  margin: 0;
+}
+
+.editor-sheet .preset-picker-head .eyebrow {
+  display: none;
+}
+
+.editor-sheet .preset-picker-head h3 {
+  margin: 0;
+  font-size: 17px;
+  text-align: center;
+}
+
+.editor-sheet .service-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+  overflow: visible;
+}
+
+.editor-sheet .service-choice-tile {
+  min-height: 62px;
+  gap: 4px;
+  border-radius: 18px;
+  padding: 8px 4px 7px;
+}
+
+.editor-sheet .service-choice-tile .cost-logo-xl {
+  width: 31px;
+  height: 31px;
+}
+
+.editor-sheet .service-choice-tile strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.1;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-sheet .editor-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-content: start;
+}
+
+.editor-sheet .editor-form .span-2,
+.editor-sheet .amount-cycle-field,
+.editor-sheet .form-summary,
+.editor-sheet .reminder-field {
+  grid-column: 1 / -1;
+}
+
+.editor-sheet .field {
+  gap: 4px;
+}
+
+.editor-sheet .field > span {
+  font-size: 11px;
+}
+
+.editor-sheet .field input,
+.editor-sheet .field select,
+.editor-sheet .field textarea {
+  min-height: 38px;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 16px;
+}
+
+.editor-sheet .field textarea {
+  min-height: 44px;
+  resize: none;
+}
+
+.editor-sheet .form-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.editor-sheet .form-summary div {
+  min-height: 48px;
+  padding: 8px 10px;
+}
+
+.editor-sheet .form-summary span {
+  font-size: 11px;
+}
+
+.editor-sheet .form-summary strong {
+  font-size: 13px;
+}
+
+.editor-sheet .form-actions {
+  display: none;
+}
+
+.compact-reminder {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+}
+
+.compact-reminder button {
+  min-height: 34px;
+  padding: 0 4px;
+  font-size: 12px;
+}
+
+.segmented,
+.contract-tabs,
+.sort-box,
+.search-box,
+.plan-toggle,
+.reminder-segment,
+.mobile-nav {
+  border-color: color-mix(in srgb, var(--line) 74%, transparent);
+  background: color-mix(in srgb, var(--surface) 66%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 35%, transparent),
+    0 8px 24px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+}
+
+.contract-tabs {
+  border: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
+  border-radius: 14px;
+  padding: 3px;
+}
+
+.contract-tabs button {
+  flex: 1;
+  min-height: 30px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  padding: 0 10px;
+}
+
+.segmented button.active,
+.contract-tabs button.active {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 92%, #fff 8%), var(--accent));
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 7px 16px color-mix(in srgb, var(--accent) 34%, transparent);
+}
+
+.mobile-nav {
+  border: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
+  border-radius: 22px 22px 0 0;
+}
+
+.mobile-nav button.active {
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.plan-toggle {
+  width: 142px;
+}
+
+.settings-row.static .plan-toggle {
+  justify-self: end;
+}
+
+.detail-screen .review-total-card {
+  display: none;
+}
+
+@media (max-width: 880px) {
+  main {
+    width: 100dvw !important;
+    max-width: 100dvw !important;
+    overflow: hidden;
+    background: var(--app-bg);
+    padding-right: 16px !important;
+    padding-left: 16px !important;
+  }
+
+  .concept-screen {
+    max-height: calc(100dvh - 72px);
+    width: 100%;
+  }
+
+  .monthly-card,
+  .concept-section,
+  .decision-list,
+  .contract-tools,
+  .contract-list,
+  .total-strip,
+  .ranking-section,
+  .breakdown-section,
+  .settings-group,
+  .notification-preview {
+    max-width: 100%;
+  }
+
+  .editor-sheet {
+    width: 100dvw;
+  }
+
+  .editor-sheet-service {
+    max-height: min(56dvh, 430px);
+  }
+
+  .editor-sheet .service-tile-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .editor-sheet .service-choice-tile:nth-child(n + 13) {
+    display: none;
+  }
+}
+
+@media (max-width: 390px) {
+  .editor-sheet .service-tile-grid {
+    gap: 7px;
+  }
+
+  .editor-sheet .service-choice-tile {
+    min-height: 58px;
+  }
+}

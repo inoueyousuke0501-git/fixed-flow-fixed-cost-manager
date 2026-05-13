@@ -40,6 +40,7 @@ import {
   type CSSProperties,
   type FormEvent,
   type ReactNode,
+  type TouchEvent,
   useEffect,
   useMemo,
   useState,
@@ -98,24 +99,21 @@ type CostPreset = {
   memo: string;
 };
 
-type ServiceTile =
-  | {
-      id: string;
-      kind: "provider";
-      provider: string;
-      label: string;
-      summary: string;
-    }
-  | {
-      id: string;
-      kind: "category";
-      category: Category;
-      label: string;
-      summary: string;
-    };
+type ServiceTile = {
+  id: string;
+  label: string;
+  name: string;
+  category: Category;
+  paymentMethod: string;
+  priority: Priority;
+  memo: string;
+  provider?: string;
+};
 
 const STORAGE_KEY = "fixed-flow-costs-v1";
 const THEME_KEY = "fixed-flow-theme";
+const PLAN_KEY = "fixed-flow-plan";
+const REMINDER_KEY = "fixed-flow-reminder-days";
 
 const cycleOptions: Array<{ value: BillingCycle; label: string; compact: string }> = [
   { value: "monthly", label: "月額", compact: "毎月" },
@@ -862,6 +860,15 @@ function loadInitialTheme(): ThemeMode {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+function loadInitialPlan() {
+  return localStorage.getItem(PLAN_KEY) === "pro";
+}
+
+function loadInitialReminderDays(): ReminderDays {
+  const stored = Number(localStorage.getItem(REMINDER_KEY));
+  return reminderOptions.some((option) => option.value === stored) ? (stored as ReminderDays) : 3;
+}
+
 function StatCard({
   icon,
   label,
@@ -902,8 +909,12 @@ export default function App() {
   const [costs, setCosts] = useState<FixedCost[]>(loadInitialCosts);
   const [theme, setTheme] = useState<ThemeMode>(loadInitialTheme);
   const [activeView, setActiveView] = useState<View>("dashboard");
+  const [editorBaseView, setEditorBaseView] = useState<View>("list");
   const [draft, setDraft] = useState<CostDraft>(emptyDraft);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isProPlan, setIsProPlan] = useState(loadInitialPlan);
+  const [globalReminderDays, setGlobalReminderDays] = useState<ReminderDays>(loadInitialReminderDays);
+  const [sheetDragStartY, setSheetDragStartY] = useState<number | null>(null);
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<Category | "all">("all");
   const [contractFilter, setContractFilter] = useState<ContractFilter>("all");
@@ -924,6 +935,14 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
+    localStorage.setItem(PLAN_KEY, isProPlan ? "pro" : "free");
+  }, [isProPlan]);
+
+  useEffect(() => {
+    localStorage.setItem(REMINDER_KEY, String(globalReminderDays));
+  }, [globalReminderDays]);
+
+  useEffect(() => {
     setListPage(0);
   }, [categoryFilter, contractFilter, costs.length, paymentFilter, query, sortKey]);
 
@@ -933,26 +952,60 @@ export default function App() {
     return Array.from(new Set(costs.map((cost) => cost.paymentMethod).filter(Boolean))).sort();
   }, [costs]);
 
-  const presetGroups = useMemo(() => Object.entries(groupPresets()), []);
   const serviceTiles = useMemo<ServiceTile[]>(() => {
-    const providerTiles = presetGroups.map(([provider]) => {
-      return {
-        id: `provider-${provider}`,
-        kind: "provider" as const,
-        provider,
-        label: providerLabel(provider),
-        summary: "金額を入力",
-      };
-    });
-    const fixedCostTiles = categoryShortcuts.map((shortcut) => ({
+    const iconTiles: ServiceTile[] = [
+      {
+        id: "service-video",
+        provider: "Netflix",
+        label: "動画",
+        name: "動画サブスク",
+        category: "サブスク",
+        paymentMethod: "",
+        priority: "medium",
+        memo: "",
+      },
+      {
+        id: "service-music",
+        provider: "Apple Music",
+        label: "音楽",
+        name: "音楽サブスク",
+        category: "サブスク",
+        paymentMethod: "",
+        priority: "medium",
+        memo: "",
+      },
+      {
+        id: "service-shopping",
+        provider: "Amazon",
+        label: "買い物",
+        name: "買い物サブスク",
+        category: "サブスク",
+        paymentMethod: "",
+        priority: "low",
+        memo: "",
+      },
+      {
+        id: "service-card",
+        provider: "American Express",
+        label: "カード",
+        name: "カード年会費",
+        category: "その他",
+        paymentMethod: "",
+        priority: "medium",
+        memo: "",
+      },
+    ];
+    const fixedCostTiles: ServiceTile[] = categoryShortcuts.map((shortcut) => ({
       id: `category-${shortcut.category}`,
-      kind: "category" as const,
       category: shortcut.category,
       label: shortcut.label,
-      summary: "金額を入力",
+      name: shortcut.name,
+      paymentMethod: shortcut.paymentMethod,
+      priority: shortcut.priority,
+      memo: shortcut.memo,
     }));
-    return [...providerTiles, ...fixedCostTiles];
-  }, [presetGroups]);
+    return [...iconTiles, ...fixedCostTiles];
+  }, []);
   const presetPageSize = serviceTiles.length;
   const presetPageCount = Math.max(1, Math.ceil(serviceTiles.length / presetPageSize));
   const visibleServiceTiles = serviceTiles.slice(presetPage * presetPageSize, (presetPage + 1) * presetPageSize);
@@ -1060,6 +1113,11 @@ export default function App() {
   const calendarTotal = calendarOccurrences.reduce((sum, occurrence) => sum + occurrence.cost.amount, 0);
 
   function switchView(view: View) {
+    if (activeView === "editor" && view !== "editor") {
+      setEditingId(null);
+      setDraft(emptyDraft());
+      setEditorStep("service");
+    }
     if (view === "editor" && activeView !== "editor") {
       setEditingId(null);
       setDraft(emptyDraft());
@@ -1070,6 +1128,7 @@ export default function App() {
   }
 
   function openCreate() {
+    setEditorBaseView(activeView === "editor" ? editorBaseView : activeView);
     setEditingId(null);
     setDraft(emptyDraft());
     setPresetPage(0);
@@ -1078,6 +1137,7 @@ export default function App() {
   }
 
   function openEdit(cost: FixedCost) {
+    setEditorBaseView(activeView === "editor" ? editorBaseView : activeView);
     setEditingId(cost.id);
     setDraft({
       name: cost.name,
@@ -1101,36 +1161,33 @@ export default function App() {
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
-  function selectPresetProvider(provider: string) {
-    const firstPreset = presetGroups.find(([itemProvider]) => itemProvider === provider)?.[1][0];
-    if (!firstPreset) return;
+  function selectServiceTile(tile: ServiceTile) {
     setDraft((current) => ({
       ...current,
-      name: providerLabel(provider),
+      name: tile.name,
       amount: 0,
       cycle: "monthly",
-      category: firstPreset.category,
-      paymentMethod: "",
-      memo: "",
-      priority: firstPreset.priority,
+      category: tile.category,
+      paymentMethod: tile.paymentMethod,
+      memo: tile.memo,
+      priority: tile.priority,
+      reminderDays: globalReminderDays,
     }));
     setEditorStep("form");
   }
 
-  function selectCategoryShortcut(category: Category) {
-    const shortcut = categoryShortcuts.find((item) => item.category === category);
-    if (!shortcut) return;
-    setDraft((current) => ({
-      ...current,
-      name: shortcut.name,
-      amount: 0,
-      cycle: "monthly",
-      category: shortcut.category,
-      paymentMethod: shortcut.paymentMethod,
-      memo: shortcut.memo,
-      priority: shortcut.priority,
-    }));
-    setEditorStep("form");
+  function closeEditor() {
+    setEditingId(null);
+    setDraft(emptyDraft());
+    setEditorStep("service");
+    setActiveView(editorBaseView === "editor" ? "list" : editorBaseView);
+  }
+
+  function handleSheetTouchEnd(event: TouchEvent<HTMLElement>) {
+    if (sheetDragStartY === null) return;
+    const distance = event.changedTouches[0].clientY - sheetDragStartY;
+    setSheetDragStartY(null);
+    if (distance > 72) closeEditor();
   }
 
   function saveCost(event: FormEvent<HTMLFormElement>) {
@@ -1168,7 +1225,7 @@ export default function App() {
     setDraft(emptyDraft());
     setEditingId(null);
     setEditorStep("service");
-    setActiveView("list");
+    setActiveView(editingId ? (editorBaseView === "editor" ? "list" : editorBaseView) : "list");
   }
 
   function deleteCost(id: string) {
@@ -1420,29 +1477,18 @@ export default function App() {
               </div>
             </div>
             <div className="service-tile-grid">
-              {visibleServiceTiles.map((tile) =>
-                tile.kind === "provider" ? (
-                  <button
-                    className="service-choice-tile"
-                    type="button"
-                    key={tile.id}
-                    onClick={() => selectPresetProvider(tile.provider)}
-                  >
-                    <CostLogo provider={tile.provider} size="xl" />
-                    <strong>{tile.label}</strong>
-                  </button>
-                ) : (
-                  <button
-                    className="service-choice-tile"
-                    type="button"
-                    key={tile.id}
-                    onClick={() => selectCategoryShortcut(tile.category)}
-                  >
-                    <CostLogo category={tile.category} size="xl" />
-                    <strong>{tile.label}</strong>
-                  </button>
-                ),
-              )}
+              {visibleServiceTiles.map((tile) => (
+                <button
+                  className="service-choice-tile"
+                  type="button"
+                  key={tile.id}
+                  onClick={() => selectServiceTile(tile)}
+                  aria-label={tile.label}
+                >
+                  <CostLogo provider={tile.provider} category={tile.category} size="xl" />
+                  <strong>{tile.label}</strong>
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -1515,6 +1561,21 @@ export default function App() {
                     ))}
                   </select>
                 </label>
+                <div className="field span-2 reminder-field">
+                  <span>リマインド</span>
+                  <div className="segmented reminder-segment compact-reminder">
+                    {reminderOptions.map((option) => (
+                      <button
+                        className={(draft.reminderDays ?? globalReminderDays) === option.value ? "active" : ""}
+                        type="button"
+                        key={option.value}
+                        onClick={() => updateDraft("reminderDays", option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <label className="field span-2">
                   <span>メモ</span>
                   <textarea
@@ -1642,7 +1703,6 @@ export default function App() {
       .slice()
       .sort((a, b) => monthlyEquivalent(b) - monthlyEquivalent(a))
       .slice(0, 5);
-    const reviewingMonthly = costs.filter(isReviewing).reduce((sum, cost) => sum + monthlyEquivalent(cost), 0);
 
     return (
       <div className="concept-screen detail-screen">
@@ -1697,17 +1757,6 @@ export default function App() {
           </button>
         </section>
 
-        <button className="review-total-card" type="button" onClick={() => {
-          setContractFilter("reviewing");
-          setActiveView("list");
-        }}>
-          <div>
-            <strong>見直し中の月額合計</strong>
-            <span>見直し中の{costs.filter(isReviewing).length}件</span>
-          </div>
-          <b>{formatCurrency.format(reviewingMonthly)}/月</b>
-          <ChevronRight size={17} />
-        </button>
       </div>
     );
   };
@@ -1720,17 +1769,24 @@ export default function App() {
           <Crown size={19} />
           <div>
             <strong>Proにアップグレード</strong>
-            <span>買い切りで登録件数・通知・データ管理を拡張</span>
+            <span>買い切り想定の挙動をプレビュー</span>
           </div>
           <ChevronRight size={17} />
         </button>
         <div className="settings-row static">
           <span>現在のプラン</span>
-          <b>無料プラン</b>
+          <div className="segmented segmented-2 plan-toggle">
+            <button className={!isProPlan ? "active" : ""} type="button" onClick={() => setIsProPlan(false)}>
+              Free
+            </button>
+            <button className={isProPlan ? "active" : ""} type="button" onClick={() => setIsProPlan(true)}>
+              Pro
+            </button>
+          </div>
         </div>
         <div className="settings-row static">
           <span>登録件数</span>
-          <b>{costs.length} / 10件</b>
+          <b>{isProPlan ? `${costs.length} / 無制限` : `${costs.length} / 10件`}</b>
         </div>
       </section>
 
@@ -1740,7 +1796,7 @@ export default function App() {
           <Bell size={19} />
           <div>
             <strong>通知設定</strong>
-            <span>判断期限の3日前を標準に通知</span>
+            <span>判断期限の{globalReminderDays === 0 ? "当日" : `${globalReminderDays}日前`}を標準に通知</span>
           </div>
           <ChevronRight size={17} />
         </button>
@@ -1797,7 +1853,12 @@ export default function App() {
         <h2>リマインドのタイミング</h2>
         <div className="segmented reminder-segment">
           {reminderOptions.map((option) => (
-            <button className={option.value === 3 ? "active" : ""} type="button" key={option.value}>
+            <button
+              className={option.value === globalReminderDays ? "active" : ""}
+              type="button"
+              key={option.value}
+              onClick={() => setGlobalReminderDays(option.value)}
+            >
               {option.label}
             </button>
           ))}
@@ -1822,13 +1883,32 @@ export default function App() {
           <span className="preview-icon">費</span>
           <div>
             <strong>固定費マネージャー</strong>
-            <p>Netflix スタンダードの更新日が3日後です（5/31）</p>
+            <p>動画サブスクの更新日が{globalReminderDays === 0 ? "今日" : `${globalReminderDays}日後`}です（5/31）</p>
           </div>
           <small>今</small>
         </div>
       </section>
     </div>
   );
+
+  const visibleView = activeView === "editor" ? editorBaseView : activeView;
+  const renderVisibleView = () => {
+    switch (visibleView) {
+      case "dashboard":
+        return renderDashboard();
+      case "list":
+        return renderList();
+      case "settings":
+        return renderSettings();
+      case "appSettings":
+        return renderAppSettings();
+      case "notifications":
+        return renderNotifications();
+      default:
+        return renderList();
+    }
+  };
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -1859,42 +1939,63 @@ export default function App() {
         </button>
       </aside>
 
-      <main className={`view-${activeView}`}>
-        <header className={`topbar topbar-${activeView}`}>
-          {(activeView === "editor" || activeView === "appSettings" || activeView === "notifications") && (
-            <button className="plain-nav-button" type="button" onClick={() => setActiveView(activeView === "editor" ? "list" : "dashboard")}>
-              {activeView === "editor" ? "キャンセル" : "戻る"}
+      <main className={`view-${visibleView} ${activeView === "editor" ? "has-editor-sheet" : ""}`}>
+        <header className={`topbar topbar-${visibleView}`}>
+          {(visibleView === "appSettings" || visibleView === "notifications") && (
+            <button className="plain-nav-button" type="button" onClick={() => setActiveView("dashboard")}>
+              戻る
             </button>
           )}
           <div>
-            <h1>{pageTitle(activeView)}</h1>
+            <h1>{pageTitle(visibleView)}</h1>
           </div>
-          {activeView === "dashboard" && (
+          {visibleView === "dashboard" && (
             <button className="icon-button concept-add-button settings-action" type="button" onClick={() => setActiveView("appSettings")} aria-label="設定">
               <Settings size={20} />
             </button>
           )}
-          {activeView === "list" && (
+          {visibleView === "list" && (
             <button className="icon-button concept-add-button add-action" type="button" onClick={openCreate} aria-label="固定費を追加">
               <Plus size={20} />
             </button>
           )}
-          {activeView === "editor" && <button className="plain-nav-button" type="submit" form="cost-editor-form">保存</button>}
-          {(activeView === "appSettings" || activeView === "notifications") && <span className="topbar-spacer" />}
+          {(visibleView === "appSettings" || visibleView === "notifications") && <span className="topbar-spacer" />}
         </header>
 
-        {activeView === "dashboard" && renderDashboard()}
-        {activeView === "list" && renderList()}
-        {activeView === "editor" && renderEditor()}
-        {activeView === "settings" && renderSettings()}
-        {activeView === "appSettings" && renderAppSettings()}
-        {activeView === "notifications" && renderNotifications()}
+        {renderVisibleView()}
       </main>
+
+      {activeView === "editor" && (
+        <div className="editor-backdrop" onClick={closeEditor}>
+          <aside
+            className={`editor-sheet editor-sheet-${editorStep}`}
+            onClick={(event) => event.stopPropagation()}
+            onTouchStart={(event) => setSheetDragStartY(event.touches[0].clientY)}
+            onTouchEnd={handleSheetTouchEnd}
+          >
+            <button className="sheet-grabber" type="button" aria-label="閉じる" onClick={closeEditor} />
+            <header className="sheet-topbar">
+              <button className="plain-nav-button" type="button" onClick={editorStep === "service" || editingId ? closeEditor : () => setEditorStep("service")}>
+                {editingId || editorStep === "service" ? "キャンセル" : "戻る"}
+              </button>
+              <strong>{editingId ? "項目を編集" : editorStep === "service" ? "項目を追加" : "詳細を入力"}</strong>
+              {editorStep === "form" || editorStep === "details" ? (
+                <button className="plain-nav-button" type="submit" form="cost-editor-form">
+                  保存
+                </button>
+              ) : (
+                <span />
+              )}
+            </header>
+            {renderEditor()}
+          </aside>
+        </div>
+      )}
 
       <nav className="mobile-nav">
         {viewTabs.map((tab) => (
           <button
-            className={activeView === tab.id ? "active" : ""}
+            className={visibleView === tab.id ? "active" : ""}
             onClick={() => switchView(tab.id)}
             type="button"
             key={tab.id}

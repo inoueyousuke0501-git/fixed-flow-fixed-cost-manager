@@ -1,7 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Fixed Flow">
-  <rect width="512" height="512" rx="112" fill="#111827"/>
-  <path d="M132 166c0-28.7 23.3-52 52-52h144c28.7 0 52 23.3 52 52v180c0 28.7-23.3 52-52 52H184c-28.7 0-52-23.3-52-52V166Z" fill="#F8F4E8"/>
-  <path d="M178 178h156M178 230h156M178 282h96" stroke="#111827" stroke-width="28" stroke-linecap="round"/>
-  <path d="M326 296c24 0 44 20 44 44s-20 44-44 44-44-20-44-44 20-44 44-44Z" fill="#4F46E5"/>
-  <path d="m306 341 13 13 28-32" stroke="#F8F4E8" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FixedFlow">
+  <rect width="512" height="512" rx="112" fill="#f8f9fb"/>
+  <path d="M93 232 256 108l163 124" fill="none" stroke="#08090b" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M137 221v174h238V221" fill="none" stroke="#08090b" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M208 214 256 300l48-86M180 290h152M180 335h152M256 300v61" fill="none" stroke="#08090b" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
