@@ -2906,6 +2906,9 @@ body,
 #root {
   min-height: 100%;
   background: var(--app-bg);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -4101,5 +4104,364 @@ main.view-list .topbar {
     height: 100dvh;
     min-height: 0;
     padding-bottom: 92px;
+  }
+}
+
+/* iPhone app polish: compact titles, liquid glass surfaces, modal add flow. */
+:root {
+  --glass-bg: color-mix(in srgb, var(--surface) 78%, transparent);
+  --glass-bg-strong: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+:root[data-theme="dark"] {
+  --glass-bg: color-mix(in srgb, var(--surface) 72%, transparent);
+  --glass-bg-strong: color-mix(in srgb, var(--surface) 84%, transparent);
+}
+
+html {
+  background: var(--app-bg);
+}
+
+.app-shell {
+  background:
+    radial-gradient(circle at 50% -140px, rgba(10, 132, 255, 0.1), transparent 320px),
+    var(--app-bg);
+}
+
+.monthly-card,
+.decision-list,
+.action-list,
+.total-strip,
+.ranking-section,
+.breakdown-section,
+.settings-group,
+.notification-preview,
+.review-total-card,
+.contract-card,
+.service-choice-tile,
+.plan-tile,
+.field input,
+.field select,
+.field textarea,
+.form-summary div,
+.mobile-nav,
+.concept-add-button {
+  background: var(--glass-bg);
+  backdrop-filter: blur(26px) saturate(1.75);
+  -webkit-backdrop-filter: blur(26px) saturate(1.75);
+}
+
+.concept-add-button,
+.settings-action,
+.add-action {
+  border-color: var(--line);
+  background: var(--glass-bg-strong);
+  color: var(--accent);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+
+.concept-add-button svg,
+.settings-action svg,
+.add-action svg {
+  color: var(--accent);
+}
+
+:root[data-theme="dark"] .concept-add-button,
+:root[data-theme="dark"] .settings-action,
+:root[data-theme="dark"] .add-action {
+  border-color: var(--line-strong);
+  background: var(--glass-bg-strong);
+  color: var(--accent);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
+}
+
+.topbar {
+  min-height: 38px;
+  margin-bottom: 10px;
+}
+
+.topbar h1 {
+  font-size: 20px;
+  font-weight: 850;
+}
+
+.topbar-dashboard h1 {
+  font-size: 22px;
+}
+
+.topbar-settings h1,
+.topbar-list h1 {
+  font-size: 20px;
+}
+
+.theme-switch-button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 10px;
+}
+
+.theme-switch-button span {
+  overflow: hidden;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.ios-switch {
+  flex: none;
+}
+
+.settings-row .ios-switch {
+  justify-self: end;
+}
+
+.home-concept .compact-home-section {
+  margin-bottom: 4px;
+}
+
+.amount-cycle-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 128px;
+  gap: 8px;
+  align-items: center;
+}
+
+.amount-cycle-control input {
+  width: 100%;
+}
+
+.amount-cycle-control .segmented {
+  min-width: 0;
+}
+
+.amount-cycle-control .segmented button {
+  min-height: 38px;
+  padding: 0 8px;
+}
+
+main.view-editor {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 60;
+  width: 100%;
+  max-width: none;
+  height: min(86dvh, 720px);
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-width: 1px 0 0;
+  border-radius: 28px 28px 0 0;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 82%, transparent), color-mix(in srgb, var(--app-bg) 94%, transparent)),
+    var(--app-bg);
+  padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
+  box-shadow: 0 -22px 70px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(30px) saturate(1.8);
+  -webkit-backdrop-filter: blur(30px) saturate(1.8);
+}
+
+.view-editor .topbar {
+  margin-bottom: 4px;
+}
+
+.view-editor .editor-panel {
+  height: calc(100% - 48px);
+  overflow: hidden;
+}
+
+.view-editor .preset-picker,
+.view-editor .editor-form {
+  height: 100%;
+  padding: 0;
+}
+
+.view-editor .preset-picker {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+}
+
+.view-editor .preset-picker-head {
+  align-items: end;
+}
+
+.view-editor .preset-picker-head span,
+.view-editor .service-choice-tile small {
+  display: none;
+}
+
+.view-editor .service-tile-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-content: start;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.view-editor .service-choice-tile {
+  min-height: 58px;
+  gap: 4px;
+  border-radius: 15px;
+  padding: 7px 4px 6px;
+}
+
+.view-editor .service-choice-tile .cost-logo-xl {
+  width: 30px;
+  height: 30px;
+}
+
+.view-editor .service-choice-tile strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.15;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.view-editor .editor-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-content: start;
+}
+
+.view-editor .editor-form .span-2,
+.view-editor .amount-cycle-field,
+.view-editor .form-summary {
+  grid-column: 1 / -1;
+}
+
+.view-editor .field {
+  gap: 4px;
+}
+
+.view-editor .field > span {
+  font-size: 11px;
+}
+
+.view-editor .field input,
+.view-editor .field select,
+.view-editor .field textarea {
+  min-height: 38px;
+  border-radius: 11px;
+  padding: 8px 10px;
+  font-size: 16px;
+}
+
+.view-editor .field textarea {
+  min-height: 48px;
+  resize: none;
+}
+
+.view-editor .segmented button {
+  min-height: 38px;
+}
+
+.view-editor .form-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.view-editor .form-summary div {
+  min-height: 54px;
+  padding: 8px 10px;
+}
+
+.view-editor .form-summary span {
+  font-size: 11px;
+}
+
+.view-editor .form-summary strong {
+  font-size: 14px;
+}
+
+.view-editor .form-actions {
+  display: none;
+}
+
+@media (max-width: 880px) {
+  .app-shell {
+    width: 100dvw;
+    max-width: 100dvw;
+    overflow-x: hidden;
+  }
+
+  main {
+    box-sizing: border-box;
+    width: calc(100dvw - 32px);
+    max-width: calc(100dvw - 32px);
+    margin: 0 auto;
+    padding-right: 0;
+    padding-left: 0;
+    padding-top: calc(18px + env(safe-area-inset-top));
+  }
+
+  main.view-list {
+    width: calc(100dvw - 32px);
+    max-width: calc(100dvw - 32px);
+    padding-right: 0;
+    padding-left: 0;
+    padding-top: calc(18px + env(safe-area-inset-top));
+  }
+
+  .topbar h1,
+  .topbar-dashboard h1,
+  .topbar-list h1,
+  .topbar-settings h1 {
+    font-size: 20px;
+  }
+
+  .mobile-nav {
+    background: color-mix(in srgb, var(--app-bg) 72%, transparent);
+  }
+
+  .home-concept .breakdown-row {
+    grid-template-columns: 8px minmax(0, 1fr) auto;
+    grid-template-rows: auto 5px;
+    gap: 4px 8px;
+  }
+
+  .home-concept .breakdown-row small {
+    display: none;
+  }
+
+  .home-concept .breakdown-row .category-swatch {
+    grid-row: 1 / 3;
+    align-self: center;
+  }
+
+  .home-concept .breakdown-row strong {
+    grid-column: 2;
+  }
+
+  .home-concept .breakdown-row i {
+    grid-column: 2 / 4;
+    grid-row: 2;
+  }
+
+  .home-concept .breakdown-row b {
+    grid-column: 3;
+    font-size: 12px;
+    text-align: right;
+  }
+}
+
+@media (max-width: 390px) {
+  .view-editor .service-tile-grid {
+    gap: 7px;
+  }
+
+  .view-editor .service-choice-tile {
+    min-height: 54px;
+  }
+
+  .amount-cycle-control {
+    grid-template-columns: minmax(0, 1fr) 118px;
   }
 }

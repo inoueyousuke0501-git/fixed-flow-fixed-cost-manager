@@ -607,8 +607,12 @@ function occurrencesInMonth(cost: FixedCost, targetMonth: Date) {
 }
 
 function safeNumber(value: unknown) {
-  const numeric = Number(value);
+  const numeric = Number(String(value ?? "").replace(/,/g, ""));
   return Number.isFinite(numeric) && numeric >= 0 ? Math.round(numeric) : 0;
+}
+
+function formatNumberInput(value: number) {
+  return value > 0 ? value.toLocaleString("ja-JP") : "";
 }
 
 function normalizeImportedCost(raw: Partial<FixedCost>, index: number): FixedCost | null {
@@ -949,7 +953,7 @@ export default function App() {
     }));
     return [...providerTiles, ...fixedCostTiles];
   }, [presetGroups]);
-  const presetPageSize = 6;
+  const presetPageSize = serviceTiles.length;
   const presetPageCount = Math.max(1, Math.ceil(serviceTiles.length / presetPageSize));
   const visibleServiceTiles = serviceTiles.slice(presetPage * presetPageSize, (presetPage + 1) * presetPageSize);
 
@@ -1253,11 +1257,6 @@ export default function App() {
     const topCategories = categoryTotals.slice(0, 5);
     const confirmedTotal = costs.filter((cost) => !isReviewing(cost)).reduce((sum, cost) => sum + monthlyEquivalent(cost), 0);
     const reviewingTotal = costs.filter(isReviewing).reduce((sum, cost) => sum + monthlyEquivalent(cost), 0);
-    const reviewingCount = costs.filter(isReviewing).length;
-    const trialCount = costs.filter((cost) => decisionKind(cost).variant === "danger").length;
-    const renewalCount = upcoming.filter((item) => item.days <= 30 && decisionKind(item.cost).variant === "success").length;
-    const unsetCount = costs.filter((cost) => !cost.cancellationDate).length;
-
     return (
       <div className="concept-screen home-concept">
         <section className="monthly-card">
@@ -1318,24 +1317,6 @@ export default function App() {
                 <b>{formatCurrency.format(category.total)}</b>
                 <small>{Math.round((category.total / Math.max(1, monthlyTotal)) * 100)}%</small>
               </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="concept-section">
-          <h2>棚卸し状況</h2>
-          <div className="inventory-grid">
-            {[
-              { label: "見直し中", value: reviewingCount, icon: <Edit3 size={24} />, tone: "blue" },
-              { label: "無料期間中", value: trialCount, icon: <Sparkles size={24} />, tone: "green" },
-              { label: "更新前", value: renewalCount, icon: <CalendarDays size={24} />, tone: "orange" },
-              { label: "期限未設定", value: unsetCount, icon: <MoreHorizontal size={24} />, tone: "gray" },
-            ].map((item) => (
-              <button className={`inventory-tile inventory-${item.tone}`} type="button" key={item.label} onClick={() => setActiveView("list")}>
-                {item.icon}
-                <span>{item.label}</span>
-                <strong>{item.value}件</strong>
-              </button>
             ))}
           </div>
         </section>
@@ -1434,10 +1415,9 @@ export default function App() {
           <div className="preset-picker service-picker">
             <div className="preset-picker-head">
               <div>
-                <p className="eyebrow">Choose</p>
-                <h3>ピクトグラムから選ぶ</h3>
+                <p className="eyebrow">追加</p>
+                <h3>追加したい項目を選んで</h3>
               </div>
-              <span>選んだあと金額を入力</span>
             </div>
             <div className="service-tile-grid">
               {visibleServiceTiles.map((tile) =>
@@ -1450,7 +1430,6 @@ export default function App() {
                   >
                     <CostLogo provider={tile.provider} size="xl" />
                     <strong>{tile.label}</strong>
-                    <small>{tile.summary}</small>
                   </button>
                 ) : (
                   <button
@@ -1461,29 +1440,9 @@ export default function App() {
                   >
                     <CostLogo category={tile.category} size="xl" />
                     <strong>{tile.label}</strong>
-                    <small>{tile.summary}</small>
                   </button>
                 ),
               )}
-            </div>
-            <div className="mini-pager">
-              <button
-                className="ghost-button"
-                type="button"
-                onClick={() => setPresetPage((current) => Math.max(0, current - 1))}
-                disabled={presetPage === 0}
-              >
-                <ChevronLeft size={15} />
-              </button>
-              <span>{presetPage + 1} / {presetPageCount}</span>
-              <button
-                className="ghost-button"
-                type="button"
-                onClick={() => setPresetPage((current) => Math.min(presetPageCount - 1, current + 1))}
-                disabled={presetPage >= presetPageCount - 1}
-              >
-                <ChevronRight size={15} />
-              </button>
             </div>
           </div>
         )}
@@ -1506,37 +1465,26 @@ export default function App() {
                     ))}
                   </select>
                 </label>
-                <label className="field">
+                <label className="field span-2 amount-cycle-field">
                   <span>金額</span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    min="0"
-                    value={draft.amount}
-                    onChange={(event) => updateDraft("amount", safeNumber(event.target.value))}
-                  />
-                </label>
-                <div className="field">
-                  <span>月額 / 年額</span>
-                  <div className="segmented segmented-2">
-                    <button className={draft.cycle !== "yearly" ? "active" : ""} type="button" onClick={() => updateDraft("cycle", "monthly")}>
-                      月額
-                    </button>
-                    <button className={draft.cycle === "yearly" ? "active" : ""} type="button" onClick={() => updateDraft("cycle", "yearly")}>
-                      年額
-                    </button>
+                  <div className="amount-cycle-control">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9,]*"
+                      value={formatNumberInput(draft.amount)}
+                      onChange={(event) => updateDraft("amount", safeNumber(event.target.value))}
+                      placeholder="1,500"
+                    />
+                    <div className="segmented segmented-2">
+                      <button className={draft.cycle !== "yearly" ? "active" : ""} type="button" onClick={() => updateDraft("cycle", "monthly")}>
+                        月額
+                      </button>
+                      <button className={draft.cycle === "yearly" ? "active" : ""} type="button" onClick={() => updateDraft("cycle", "yearly")}>
+                        年額
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <label className="field">
-                  <span>支払周期</span>
-                  <select value={draft.cycle} onChange={(event) => updateDraft("cycle", event.target.value as BillingCycle)}>
-                    {cycleOptions.map((option) => (
-                      <option value={option.value} key={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
                 </label>
                 <div className="field">
                   <span>ステータス</span>
@@ -1572,19 +1520,9 @@ export default function App() {
                   <textarea
                     value={draft.memo}
                     onChange={(event) => updateDraft("memo", event.target.value)}
-                    rows={3}
+                    rows={2}
                     placeholder="契約条件、解約条件、見直し理由など"
                   />
-                </label>
-                <label className="field span-2">
-                  <span>通知リマインド</span>
-                  <select value={draft.reminderDays ?? 3} onChange={(event) => updateDraft("reminderDays", Number(event.target.value) as ReminderDays)}>
-                    {reminderOptions.map((option) => (
-                      <option value={option.value} key={option.value}>
-                        {option.label}に通知
-                      </option>
-                    ))}
-                  </select>
                 </label>
               </>
             ) : (
@@ -1825,10 +1763,10 @@ export default function App() {
 
       <section className="settings-group">
         <h2>表示</h2>
-        <button className="settings-row" type="button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+        <button className="settings-row" type="button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-pressed={theme === "dark"}>
           {theme === "dark" ? <Moon size={19} /> : <Sun size={19} />}
           <span>ダークモード</span>
-          <b>{theme === "dark" ? "オン" : "オフ"}</b>
+          <i className={`ios-switch ${theme === "dark" ? "on" : ""}`} aria-hidden="true" />
         </button>
       </section>
 
@@ -1914,14 +1852,15 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <button className="theme-toggle" type="button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-          {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
-          {theme === "dark" ? "ライトモード" : "ダークモード"}
+        <button className="theme-toggle theme-switch-button" type="button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-pressed={theme === "dark"}>
+          {theme === "dark" ? <Moon size={17} /> : <Sun size={17} />}
+          <span>ダーク</span>
+          <i className={`ios-switch ${theme === "dark" ? "on" : ""}`} aria-hidden="true" />
         </button>
       </aside>
 
       <main className={`view-${activeView}`}>
-        <header className="topbar">
+        <header className={`topbar topbar-${activeView}`}>
           {(activeView === "editor" || activeView === "appSettings" || activeView === "notifications") && (
             <button className="plain-nav-button" type="button" onClick={() => setActiveView(activeView === "editor" ? "list" : "dashboard")}>
               {activeView === "editor" ? "キャンセル" : "戻る"}
@@ -1936,7 +1875,7 @@ export default function App() {
             </button>
           )}
           {activeView === "list" && (
-            <button className="icon-button concept-add-button" type="button" onClick={openCreate} aria-label="固定費を追加">
+            <button className="icon-button concept-add-button add-action" type="button" onClick={openCreate} aria-label="固定費を追加">
               <Plus size={20} />
             </button>
           )}
@@ -2285,11 +2224,11 @@ function displayCostName(name: string) {
 function pageTitle(view: View) {
   switch (view) {
     case "dashboard":
-      return "固定費";
+      return "FixedFlow";
     case "list":
       return "契約";
     case "editor":
-      return "詳細を追加";
+      return "項目を追加";
     case "settings":
       return "内訳";
     case "appSettings":
